@@ -513,6 +513,12 @@
             document.getElementById('m-feedback-done-msg').classList.remove('hidden');
             document.querySelectorAll('#m-feedback-card button[onclick^="submitFeedback"]').forEach(b => b.disabled = true);
             addLog(`[Personalize AI] 피드백 반영: 오프셋 ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C 저장 (이 조합 누적 ${count + 1}회)`, 'text-sky-300 font-bold');
+
+            setTimeout(() => {
+                const card = document.getElementById('m-feedback-card');
+                card.classList.add('hidden');
+                card.classList.remove('flex');
+            }, 1800);
         }
 
         function getTemperTime(cat, initTemp) {
