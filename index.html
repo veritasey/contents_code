@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphene Smart Cooker V7.8.1 (SmartThings One UI Sync)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .panel { background-color: #1e293b; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .glow { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); border-color: #38bdf8 !important; }
+        .disabled-slot { opacity: 0.3; cursor: not-allowed; background-color: #334155; color: #94a3b8; text-decoration: line-through; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        .pwm-bar { transition: height 0.1s linear; }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #38bdf8; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #475569; border-radius: 2px;
+        }
+        .radio-segment input:checked + span { background-color: #0ea5e9; color: white; border-color: #0ea5e9; font-weight: bold;}
+
+        /* SmartThings One UI Specific Styles */
+        .one-ui-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
+
+    <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V7.8.1</h1>
+            <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
+        </div>
+        <div class="flex gap-4 text-xs font-mono">
+            <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> API Connected</span>
+            <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[#0381FE] animate-pulse"></div> SmartThings Sync</span>
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-3 gap-3 p-3 overflow-hidden">
+        
+        <!-- COLUMN 1: Device LCD UI -->
+        <section class="panel rounded-xl flex flex-col overflow-hidden relative">
+            <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
+                <div class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
+                <div class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
+                <button onclick="resetSimulation()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">중지 및 초기화</button>
+            </div>
+
+            <div class="bg-slate-800 p-2.5 border-b border-slate-700 font-bold text-sm text-purple-400 flex items-center gap-2">
+                🖥️ Device UI (LCD Panel)
+            </div>
+            
+            <div class="p-3 flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-4" id="ui-container">
+                <div class="bg-slate-800 p-3 rounded-lg border border-slate-600 shadow-inner flex flex-col gap-3">
+                    
+                    <!-- Thickness Slider -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <h2 class="text-[11px] font-bold text-amber-400">⚙️ [Test] 두께 수동 설정 (Manual)</h2>
+                            <span id="slider-val" class="text-[11px] font-mono font-bold text-sky-400 bg-slate-900 px-2 py-1 rounded">Auto</span>
+                        </div>
+                        <input type="range" id="test-thickness" min="0" max="50" value="0" class="w-full appearance-none bg-transparent" oninput="updateThicknessLabel(this.value)">
+                        <div class="flex justify-between text-[9px] text-slate-500 mt-1 px-1">
+                            <span>Auto</span><span>25mm</span><span>50mm</span>
+                        </div>
+                    </div>
+
+                    <!-- Initial Temp Slider -->
+                    <div class="border-t border-slate-700 pt-2">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <h2 class="text-[11px] font-bold text-emerald-400">🌡️ [Test] 초기 심부 온도 설정</h2>
+                            <span id="slider-temp-val" class="text-[11px] font-mono font-bold text-emerald-300 bg-slate-900 px-2 py-1 rounded">22 ℃</span>
+                        </div>
+                        <input type="range" id="test-init-temp" min="-20" max="22" value="22" class="w-full appearance-none bg-transparent" oninput="updateInitTempLabel(this.value)">
+                        <div class="flex justify-between text-[9px] text-slate-500 mt-1 px-1">
+                            <span>-20℃ (냉동)</span><span>8℃ (냉장)</span><span>22℃ (실온)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Time Scale -->
+                    <div class="border-t border-slate-700 pt-2">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <h2 class="text-[11px] font-bold text-sky-400">⏱️ [Test] 시뮬레이션 배속</h2>
+                        </div>
+                        <div class="flex bg-slate-900 rounded p-1 text-[10px] font-mono font-bold border border-slate-700">
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="1" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x1</span></label>
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="10" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x10</span></label>
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="20" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x20</span></label>
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="30" class="hidden" checked><span class="block py-1 rounded transition-colors text-slate-400">x30</span></label>
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="50" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x50</span></label>
+                            <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="100" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x100</span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-[11px] font-bold text-slate-400 mb-1.5">1. 식재료 카테고리 선택</h2>
+                    <div class="grid grid-cols-2 gap-1.5" id="grid-category"></div>
+                </div>
+
+                <div id="step-cut" class="hidden opacity-0 transition-opacity duration-300">
+                    <h2 class="text-[11px] font-bold text-slate-400 mb-1.5">2. 부위 선택</h2>
+                    <div class="flex flex-col gap-1.5" id="grid-cut"></div>
+                </div>
+
+                <div id="step-doneness" class="hidden opacity-0 transition-opacity duration-300">
+                    <h2 class="text-[11px] font-bold text-slate-400 mb-1.5">3. 굽기 / 조리 목표</h2>
+                    <div class="flex flex-col gap-1.5" id="grid-doneness"></div>
+                </div>
+
+                <div id="step-action" class="hidden mt-auto pt-2">
+                    <div class="text-center text-[10px] font-mono font-bold text-sky-400 mb-1.5 bg-slate-800 p-1.5 rounded" id="eta-preview">예상 소요 시간 계산 중...</div>
+                    <button onclick="startSimulation()" id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors">
+                        🔥 조리 시작 (Start Cooking)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMN 2: Central Systems -->
+        <section class="flex flex-col gap-2 overflow-hidden">
+            <!-- 1. Sensor Hub -->
+            <div class="panel rounded-xl p-3 border-l-4 border-sky-500 shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-[11px] font-bold text-sky-400">📡 Sensor Hub (Real-time)</h3>
+                    <div class="flex gap-2">
+                        <span id="scale-badge" class="bg-sky-900 text-sky-300 px-1.5 py-0.5 rounded text-[9px] font-mono">30x Speed</span>
+                    </div>
+                </div>
+                <div class="flex justify-between gap-1.5">
+                    <div class="bg-slate-800 p-1.5 rounded-lg flex-1 border border-slate-700">
+                        <p class="text-[9px] text-slate-400 text-center">측정 두께 (mm)</p>
+                        <p class="text-lg font-mono font-bold text-white text-center" id="val-thickness">--</p>
+                    </div>
+                    <div class="bg-slate-800 p-1.5 rounded-lg flex-1 border border-slate-700 relative">
+                        <p class="text-[9px] text-emerald-400 font-bold text-center">재료 온도 (°C)</p>
+                        <p class="text-lg font-mono font-bold text-white text-center transition-colors" id="val-temp">22.0</p>
+                        <div id="temp-alert" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded hidden">가열중단</div>
+                    </div>
+                    <div class="bg-slate-900 p-1.5 rounded-lg flex-1 border border-sky-900 shadow-inner">
+                        <p class="text-[9px] text-sky-500 text-center font-bold">소요 시간</p>
+                        <p class="text-lg font-mono font-bold text-sky-400 text-center tracking-wider" id="val-time">00:00</p>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1 mt-2 overflow-hidden relative">
+                    <div id="total-progress" class="bg-sky-500 h-1 rounded-full transition-all duration-100 ease-linear" style="width: 0%"></div>
+                    <div id="marker-rest" class="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10 hidden" style="left: 75%;"></div>
+                </div>
+            </div>
+            
+            <!-- 2. Core Engine -->
+            <div class="panel rounded-xl p-3 border-l-4 border-emerald-500">
+                <h3 class="text-[11px] font-bold text-emerald-400 mb-2">🧠 Core Engine (Thermal Logic)</h3>
+                <div class="flex flex-col gap-1.5 font-mono text-[10px]">
+                    <div id="mcu-idle" class="bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center">
+                        <span>1. 대기 및 두께측정</span>
+                        <div class="text-right">
+                            <span class="text-sky-300 font-bold" id="t-idle"></span>
+                            <span class="text-slate-500 ml-2" id="d-idle">--</span>
+                        </div>
+                    </div>
+                    <div id="mcu-temper" class="bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center">
+                        <span>2. 템페링 가온</span>
+                        <div class="text-right">
+                            <span class="text-amber-400 font-bold" id="t-temper"></span>
+                            <span class="text-slate-500 ml-2" id="d-temper">--</span>
+                        </div>
+                    </div>
+                    <div id="mcu-cook" class="bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center">
+                        <span>3. 상하 복사열 조리</span>
+                        <div class="text-right">
+                            <span class="text-red-400 font-bold" id="t-cook"></span>
+                            <span class="text-slate-500 ml-2" id="d-cook">--</span>
+                        </div>
+                    </div>
+                    <div id="mcu-finish" class="bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center">
+                        <span>4. 잔열 레스팅 마감</span>
+                        <div class="text-right">
+                            <span class="text-purple-400 font-bold" id="t-finish"></span>
+                            <span class="text-slate-500 ml-2" id="d-finish">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. HW Actuators -->
+            <div class="panel rounded-xl p-3 border-l-4 border-amber-500">
+                <h3 class="text-[11px] font-bold text-amber-400 mb-2">⚙️ HW Actuators (PWM & Motor)</h3>
+                <div class="flex justify-between items-end h-16 text-center">
+                    <div class="w-[30%] bg-slate-800 rounded flex flex-col justify-end items-center h-full relative overflow-hidden border border-slate-700">
+                        <div id="pwm-top" class="pwm-bar w-full bg-amber-500 opacity-80" style="height: 0%;"></div>
+                        <span class="absolute inset-0 flex flex-col items-center justify-center z-10 drop-shadow-md">
+                            <span class="text-[9px] font-bold text-slate-300">Top IR</span>
+                            <span class="text-[12px] font-bold text-white" id="pwm-top-txt">0%</span>
+                        </span>
+                    </div>
+                    <div class="w-[30%] bg-slate-800 rounded flex flex-col justify-end items-center h-full relative overflow-hidden border border-slate-700">
+                        <div id="pwm-bottom" class="pwm-bar w-full bg-amber-600 opacity-80" style="height: 0%;"></div>
+                        <span class="absolute inset-0 flex flex-col items-center justify-center z-10 drop-shadow-md">
+                            <span class="text-[9px] font-bold text-slate-300">Btm IR</span>
+                            <span class="text-[12px] font-bold text-white" id="pwm-bottom-txt">0%</span>
+                        </span>
+                    </div>
+                    <div class="w-[35%] bg-slate-800 rounded flex flex-col justify-center items-center h-full border-2 border-slate-600 transition-colors" id="hw-hood">
+                        <span class="text-xl mb-0.5" id="hood-icon">🏗️</span>
+                        <span class="text-[9px] font-bold text-center leading-tight" id="hood-status">완전 개방<br>(100%)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 4. Log Terminal -->
+            <div class="panel rounded-xl flex flex-col flex-1 min-h-0 border-l-4 border-slate-500">
+                <div class="bg-slate-800 p-2 border-b border-slate-700 font-bold text-xs text-slate-300 flex justify-between items-center">
+                    <span>☁️ Log Terminal</span>
+                    <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
+                </div>
+                <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
+                    <div class="text-slate-500">[System] V7.8.1 Simulator Loaded. Ready.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMN 3: SmartThings One UI App View -->
+        <section class="flex justify-center items-center h-full relative bg-slate-800/30 rounded-xl border border-slate-800/50">
+            <!-- Mobile Phone Shell -->
+            <div class="w-full max-w-[360px] h-[96%] max-h-[800px] bg-[#F4F4F4] border-[8px] border-slate-800 rounded-[2.5rem] relative shadow-2xl flex flex-col overflow-hidden font-sans">
+                
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                <div class="flex justify-between items-center px-5 pt-2 pb-1 text-[11px] font-bold text-gray-800 bg-[#F4F4F4] z-10">
+                    <span>9:41</span>
+                    <div class="flex gap-1.5"><span>📶</span><span>🔋</span></div>
+                </div>
+
+                <!-- 1. Header -->
+                <div class="px-5 pb-2 bg-[#F4F4F4] z-10 flex flex-col items-center">
+                    <h2 class="text-[15px] font-extrabold text-gray-900 tracking-tight mt-1">그래핀 스마트 쿠커</h2>
+                    <p class="text-[12px] font-bold text-[#0381FE] mt-1" id="m-status-text">대기 중</p>
+                </div>
+
+                <!-- Scrollable Body (min-h-0 추가로 유연한 스크롤 보장) -->
+                <div class="flex-1 min-h-0 overflow-y-auto px-5 pb-[110px] scrollbar-hide flex flex-col">
+                    
+                    <!-- 2. Main Status (원형 게이지 사이즈 업) -->
+                    <div class="bg-white rounded-[24px] p-4 mb-3 one-ui-shadow flex flex-col items-center justify-center">
+                        <div class="relative w-[180px] h-[180px]">
+                            <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="#F3F4F6" stroke-width="6"></circle>
+                                <!-- r=42 -> circumference = 263.89 -->
+                                <circle id="m-ring" cx="50" cy="50" r="42" fill="none" stroke="#0381FE" stroke-width="6" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" class="transition-all duration-200 ease-linear"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center mt-1">
+                                <div class="flex items-start text-gray-900">
+                                    <span class="text-5xl font-bold tracking-tighter" id="m-temp">22.0</span>
+                                    <span class="text-sm font-bold mt-1 text-gray-500 ml-1">°C</span>
+                                </div>
+                                <span class="text-[12px] font-bold text-gray-500 mt-2" id="m-time-remain">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Control Cards -->
+                    <!-- Card 1: Category & Cut -->
+                    <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                        <h3 class="text-[13px] font-bold text-gray-800 mb-3">재료 및 종류</h3>
+                        <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-3 pb-1" id="m-cat-container">
+                            <!-- JS Generated -->
+                        </div>
+                        <div class="relative">
+                            <select id="m-cut-select" class="w-full bg-[#F4F4F4] text-gray-800 text-[12px] font-bold rounded-xl p-3 pl-4 focus:outline-none focus:ring-2 focus:ring-[#0381FE]/50" onchange="mobileSelectCutChanged(this.value)">
+                                <option value="">종류(부위) 선택</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Doneness -->
+                    <div class="bg-white rounded-[20px] p-4 shadow-sm mb-3 one-ui-shadow">
+                        <h3 class="text-[13px] font-bold text-gray-800 mb-3">목표 굽기</h3>
+                        <div class="relative">
+                            <select id="m-done-select" class="w-full bg-[#F4F4F4] text-gray-800 text-[12px] font-bold rounded-xl p-3 pl-4 focus:outline-none focus:ring-2 focus:ring-[#0381FE]/50 disabled:opacity-50" onchange="mobileSelectDoneChanged(this.value)">
+                                <option value="">굽기 선택</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Lower Action Bar (Fixed) -->
+                <div class="absolute bottom-[60px] left-0 right-0 px-5 py-3 bg-gradient-to-t from-[#F4F4F4] to-transparent">
+                    <button id="m-btn-start" onclick="startSimulation()" class="w-full bg-[#0381FE] active:bg-[#0265C8] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors" disabled>
+                        조리 시작
+                    </button>
+                    <button id="m-btn-stop" onclick="resetSimulation()" class="w-full bg-[#E5E7EB] active:bg-[#D1D5DB] text-gray-700 font-bold text-[15px] py-3.5 rounded-[18px] shadow-sm transition-colors hidden">
+                        가열 중단 / 취소
+                    </button>
+                </div>
+
+                <!-- 5. Bottom Menu Tab -->
+                <div class="absolute bottom-0 left-0 right-0 h-[60px] bg-white border-t border-gray-200 flex text-[11px] font-bold z-10">
+                    <div class="flex-1 flex flex-col items-center justify-center text-[#0381FE] cursor-pointer">
+                        <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path></svg>
+                        기기제어
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center text-gray-400 cursor-default" onclick="return false;">
+                        <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
+                        서비스
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let deviceState = { power: true, cookStatus: 'idle', currentPhase: 0 };
+        let thermalMetrics = { targetTempPull: 0, targetTempFinal: 0, currentMaterialTemp: 22.0, remainingTimeSec: 0 };
+        let timeScale = 30; 
+        
+        let calculatedPhaseTimes = { temper: 0, cook: 0, finish: 0 }; // 단계별 시간 저장
+        let state = { category: null, cut: null, doneness: null, hoodFinishAction: null };
+
+        let simTick = null;
+        let virtualTime = 0;
+        let totalSimTime = 0;
+        let t1 = 0, t2 = 0, t3 = 0, t4 = 0; 
+
+        const config = {
+            categories: [
+                { id: 'beef', label: '소고기', icon: '🥩', hood: '미세개방 (Resting)' },
+                { id: 'pork', label: '돼지고기', icon: '🥓', hood: '미세개방 (Resting)' },
+                { id: 'chicken', label: '닭고기', icon: '🍗', hood: '밀폐정온 (Warm)' },
+                { id: 'seafood', label: '해산물', icon: '🐟', hood: '밀폐정온 (Warm)' },
+                { id: 'veges', label: '채소류', icon: '🥦', hood: '밀폐정온 (Warm)' },
+                { id: 'grains', label: '곡류', icon: '🍚', hood: '완전밀폐 (Steam)' }
+            ],
+            cuts: {
+                beef: ['꽃등심', '채끝', '안심', '등심', '기타'],
+                pork: ['삼겹살', '목살', '갈비', '등심', '기타'],
+                chicken: ['닭다리', '닭가슴살', '닭날개', '통닭(스패치콕)', '기타'],
+                seafood: ['흰살생선', '붉은살생선', '연체동물', '갑각류', '패류(조개)'],
+                veges: ['잎/줄기 (아스파라거스/대파)', '뿌리 (감자/고구마)', '열매 (가지/애호박)', '버섯 (새송이 등)', '기타'],
+                grains: ['백미', '잡곡', '현미', '옥수수', '기타']
+            }
+        };
+
+        function getDonenessOptions(cat, cut) {
+            const padCenter = (label) => [{label:'-', active:false}, {label:'-', active:false}, {label:label, active:true}, {label:'-', active:false}, {label:'-', active:false}];
+            if(cat === 'beef') return [{label:'레어', active:true}, {label:'미디엄 레어', active:true}, {label:'미디엄', active:true}, {label:'미디엄 웰', active:true}, {label:'웰던', active:true}];
+            if(cat === 'pork') return [{label:'레어 (위생차단)', active:false}, {label:'미디엄 레어 (위생차단)', active:false}, {label:'미디엄', active:true}, {label:'미디엄 웰', active:true}, {label:'웰던', active:true}];
+            return padCenter('바로 조리');
+        }
+
+        function getMobileDonenessOptions(cat) {
+            if(cat === 'beef') return ['레어', '미디엄 레어', '미디엄', '미디엄 웰', '웰던'];
+            if(cat === 'pork') return ['미디엄', '미디엄 웰', '웰던']; 
+            return ['바로 조리'];
+        }
+
+        function getTempProfile(cat, cut, done) {
+            if(cat === 'beef') {
+                if(done.includes('레어') && !done.includes('미디엄')) return { pull: 48, final: 51, desc: "잔열 상승 / 붉은 육즙" };
+                if(done.includes('미디엄 레어')) return { pull: 51.5, final: 55.5, desc: "잔열 상승 / 풍미·육즙 최상" };
+                if(done === '미디엄') return { pull: 56.5, final: 61.5, desc: "잔열 상승 / 씹는맛 촉촉함 균형" };
+                if(done.includes('미디엄 웰')) return { pull: 62, final: 66.5, desc: "잔열 상승 / 단단한 식감" };
+                if(done.includes('웰던')) return { pull: 67, final: 71, desc: "잔열 상승 / 속까지 완숙" };
+            }
+            if(cat === 'pork') {
+                if(done === '미디엄') return { pull: 59, final: 63, desc: "잔열 상승 / 육즙 촉촉" };
+                if(done === '미디엄 웰') return { pull: 64.5, final: 68, desc: "잔열 상승 / 담백한 상태" };
+                if(done === '웰던') return { pull: 69, final: 71, desc: "잔열 상승 / 단단함" };
+            }
+            if(cat === 'chicken') {
+                if(cut === '닭가슴살') return { pull: 64, final: 64, desc: "저온 조리 촉촉함 극대화" };
+                if(cut === '통닭(스패치콕)') return { pull: 70, final: 70, desc: "가슴(65) / 다리(75) 이중 온도 제어" }; 
+                return { pull: 77, final: 77, desc: "콜라겐 쫄깃함 활성화" }; 
+            }
+            if(cat === 'seafood') {
+                if(cut === '흰살생선') return { pull: 52.5, final: 52.5, desc: "단백질 변성 완료" };
+                if(cut === '붉은살생선') return { pull: 47.5, final: 47.5, desc: "고소한 지방 수분 유지" };
+                if(cut === '갑각류') return { pull: 57.5, final: 57.5, desc: "살 불투명 탱글해짐" };
+                if(cut === '연체동물') return { pull: 57.5, final: 57.5, desc: "연한 식감 유지 단기 가열" };
+                if(cut === '패류(조개)') return { pull: 62.5, final: 62.5, desc: "껍데기 열림 및 완숙" };
+            }
+            if(cat === 'veges') {
+                if(cut.includes('뿌리')) return { pull: 87.5, final: 87.5, desc: "펙틴 성분 분해 연화" };
+                if(cut.includes('열매')) return { pull: 82.5, final: 82.5, desc: "당도 활성화 및 형태 보존" };
+                if(cut.includes('버섯')) return { pull: 82.5, final: 82.5, desc: "키틴 구조 유지 감칠맛" };
+                if(cut.includes('잎/줄기')) return { pull: 75, final: 75, desc: "엽록소 파괴 방지 아삭함" };
+                return { pull: 80, final: 80, desc: "채소류 기본 조리" }; 
+            }
+            if(cat === 'grains') {
+                if(cut === '백미') return { pull: 96.5, final: 96.5, desc: "전분 호화 완료" };
+                if(cut.includes('현미') || cut.includes('잡곡')) return { pull: 99, final: 99, desc: "외피 연화 및 호화" };
+                if(cut === '옥수수') return { pull: 87.5, final: 87.5, desc: "수분 팽창 아삭함" };
+            }
+            return { pull: 60, final: 60, desc: "기본 조리" };
+        }
+
+        function getTemperTime(cat, initTemp) {
+            if (!['beef', 'pork', 'chicken'].includes(cat)) return 30; // 템페링 미적용 군
+            if (initTemp <= -20) return 4200; // 70분 (해동)
+            if (initTemp <= 4) return Math.floor(4200 - ((initTemp - -20) / 24) * 3600); // 4200s ~ 600s
+            if (initTemp <= 8) return Math.floor(600 - ((initTemp - 4) / 4) * 570);     // 600s ~ 30s
+            return 30; // 상온 이상 (기본 안정화)
+        }
+
+        function calculatePhaseTimes(cat, thickness, doneness, initTemp) {
+            let temperSec = getTemperTime(cat, initTemp);
+            
+            let cookBase = 840; // 14 mins (beef baseline)
+            if(cat === 'pork') cookBase = 900; 
+            if(cat === 'chicken') cookBase = 1080;
+            if(cat === 'seafood' || cat === 'veges') cookBase = 600;
+            if(cat === 'grains') cookBase = 1200;
+
+            let thickMult = (cat === 'grains') ? 1.0 : Math.max(0.5, thickness / 25.0);
+            let doneMult = 1.0;
+            
+            if(doneness) {
+                if (doneness.includes('레어') && !doneness.includes('미디엄')) doneMult = 0.85;
+                else if (doneness.includes('미디엄 레어')) doneMult = 1.0; 
+                else if (doneness === '미디엄') doneMult = 1.15;
+                else if (doneness.includes('미디엄 웰')) doneMult = 1.3;
+                else if (doneness.includes('웰던')) doneMult = 1.45;
+            }
+            
+            let cookSec = Math.floor(cookBase * thickMult * doneMult);
+            let finishSec = 180; // 기본 잔열 레스팅 3분
+            
+            return { temper: temperSec, cook: cookSec, finish: finishSec };
+        }
+
+        function updateCoreEngineTargets() {
+            if(!state.category || !state.cut || !state.doneness) {
+                ['t-idle', 't-temper', 't-cook', 't-finish'].forEach(id => document.getElementById(id).innerText = '');
+                ['d-idle', 'd-temper', 'd-cook', 'd-finish'].forEach(id => document.getElementById(id).innerText = '--');
+                return;
+            }
+            const profile = getTempProfile(state.category, state.cut, state.doneness);
+            const startTemp = parseFloat(document.getElementById('test-init-temp').value);
+            const temperTarget = Math.max(startTemp, 8.0);
+            
+            document.getElementById('t-idle').innerText = `목표: 대기`;
+            document.getElementById('t-temper').innerText = `목표: ${temperTarget.toFixed(1)}℃`;
+            document.getElementById('t-cook').innerText = `목표: ${profile.pull.toFixed(1)}℃`;
+            document.getElementById('t-finish').innerText = `목표: ${profile.final.toFixed(1)}℃`;
+
+            const sliderVal = parseInt(document.getElementById('test-thickness').value);
+            const thick = sliderVal === 0 ? 25 : sliderVal;
+            const targetDone = state.doneness || '바로 조리';
+            
+            calculatedPhaseTimes = calculatePhaseTimes(state.category, thick, targetDone, startTemp);
+            const fm = (sec) => `${Math.floor(sec/60)}분 ${String(Math.floor(sec%60)).padStart(2,'0')}초`;
+            
+            document.getElementById('d-idle').innerText = `10초`; 
+            document.getElementById('d-temper').innerText = fm(calculatedPhaseTimes.temper);
+            document.getElementById('d-cook').innerText = fm(calculatedPhaseTimes.cook);
+            document.getElementById('d-finish').innerText = fm(calculatedPhaseTimes.finish);
+        }
+
+        function updateETA() {
+            if(!state.category) return;
+            const sliderVal = parseInt(document.getElementById('test-thickness').value);
+            const thickness = sliderVal === 0 ? 25 : sliderVal;
+            const startTemp = parseFloat(document.getElementById('test-init-temp').value);
+            const targetDone = state.doneness || '바로 조리';
+            
+            const times = calculatePhaseTimes(state.category, thickness, targetDone, startTemp);
+            const totalSec = 10 + times.temper + times.cook + times.finish; // idle 포함
+            
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            document.getElementById('eta-preview').innerText = `총 조리 예상: ${m}분 ${String(s).padStart(2,'0')}초`;
+            
+            if(deviceState.cookStatus === 'idle') {
+                document.getElementById('m-time-remain').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }
+            
+            updateCoreEngineTargets();
+        }
+
+        function updateThicknessLabel(val) {
+            const label = document.getElementById('slider-val');
+            if (val == 0) {
+                label.innerText = 'Auto';
+                label.className = 'text-[11px] font-mono font-bold text-sky-400 bg-slate-900 px-2 py-1 rounded';
+            } else {
+                label.innerText = val + ' mm';
+                label.className = 'text-[11px] font-mono font-bold text-amber-400 bg-slate-900 px-2 py-1 rounded';
+            }
+            updateETA();
+        }
+
+        function updateInitTempLabel(val) {
+            const label = document.getElementById('slider-temp-val');
+            label.innerText = val + ' ℃';
+            
+            let initialTemp = parseFloat(val);
+            if(deviceState.cookStatus === 'idle') {
+                document.getElementById('val-temp').innerText = initialTemp.toFixed(1);
+                document.getElementById('m-temp').innerText = initialTemp.toFixed(1);
+                thermalMetrics.currentMaterialTemp = initialTemp;
+            }
+            updateETA();
+        }
+
+        function syncMobileUI() {
+            document.querySelectorAll('[id^="m-cat-"]').forEach(el => {
+                el.classList.remove('bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
+                el.classList.add('bg-[#F4F4F4]', 'text-gray-500', 'border-transparent');
+                el.querySelector('span:last-child').classList.remove('text-white');
+                el.querySelector('span:last-child').classList.add('text-gray-500');
+            });
+
+            const mCut = document.getElementById('m-cut-select');
+            const mDoneSelect = document.getElementById('m-done-select');
+
+            if(state.category) {
+                const activeCat = document.getElementById(`m-cat-${state.category}`);
+                if(activeCat) {
+                    activeCat.classList.remove('bg-[#F4F4F4]', 'border-transparent');
+                    activeCat.classList.add('bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
+                    activeCat.querySelector('span:last-child').classList.remove('text-gray-500');
+                    activeCat.querySelector('span:last-child').classList.add('text-white');
+                }
+                
+                mCut.innerHTML = '<option value="">종류(부위) 선택</option>';
+                config.cuts[state.category].forEach(cut => {
+                    mCut.innerHTML += `<option value="${cut}" ${state.cut === cut ? 'selected' : ''}>${cut}</option>`;
+                });
+                mCut.disabled = false;
+            } else {
+                mCut.innerHTML = '<option value="">종류(부위) 선택</option>';
+                mCut.disabled = true;
+            }
+
+            mDoneSelect.innerHTML = '';
+            
+            if(state.category && state.cut) {
+                const options = getMobileDonenessOptions(state.category);
+                
+                if(options.length === 1 && options[0].includes('바로 조리')) {
+                    mDoneSelect.innerHTML = `<option value="${options[0]}" selected>${options[0]}</option>`;
+                    mDoneSelect.disabled = true;
+                    if(state.doneness !== options[0]) mobileSelectDoneChanged(options[0]);
+                } 
+                else {
+                    mDoneSelect.disabled = false;
+                    options.forEach(opt => {
+                        mDoneSelect.innerHTML += `<option value="${opt}" ${state.doneness === opt ? 'selected' : ''}>${opt}</option>`;
+                    });
+                    
+                    if(!state.doneness) {
+                        const defaultOpt = options.includes('미디엄 레어') ? '미디엄 레어' : options[0];
+                        mDoneSelect.value = defaultOpt;
+                        mobileSelectDoneChanged(defaultOpt);
+                    }
+                }
+            } else {
+                mDoneSelect.innerHTML = '<option value="">굽기 선택</option>';
+                mDoneSelect.disabled = true;
+            }
+
+            // 하단 조리 시작 버튼 동기화
+            if (state.category && state.cut && state.doneness) {
+                document.getElementById('m-btn-start').disabled = false;
+            } else {
+                document.getElementById('m-btn-start').disabled = true;
+            }
+        }
+
+        function mobileSelectCutChanged(val) {
+            if(!val) return;
+            const leftBtns = document.getElementById('grid-cut').querySelectorAll('button');
+            leftBtns.forEach(lb => { if(lb.innerText === val) lb.click(); });
+        }
+
+        function mobileSelectDoneChanged(val) {
+            if(!val) return;
+            const leftBtns = document.getElementById('grid-doneness').querySelectorAll('button');
+            leftBtns.forEach(lb => { if(lb.innerText === val) lb.click(); });
+        }
+
+        function initUI() {
+            const catGrid = document.getElementById('grid-category');
+            const mCatContainer = document.getElementById('m-cat-container');
+            
+            catGrid.innerHTML = '';
+            mCatContainer.innerHTML = '';
+            
+            config.categories.forEach(c => {
+                const btn = document.createElement('button');
+                btn.id = `cat-btn-${c.id}`;
+                btn.className = 'bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 px-1 rounded border border-slate-600 text-[11px] font-bold transition-all';
+                btn.innerHTML = `${c.icon} ${c.label}`;
+                btn.onclick = () => selectCategory(c.id, btn, c.hood);
+                catGrid.appendChild(btn);
+
+                const mBtn = document.createElement('div');
+                mBtn.id = `m-cat-${c.id}`;
+                mBtn.className = 'flex flex-col items-center justify-center min-w-[65px] p-2 rounded-[14px] bg-[#F4F4F4] border border-transparent cursor-pointer transition-colors shrink-0';
+                mBtn.innerHTML = `<span class="text-xl mb-1 leading-none">${c.icon}</span><span class="text-[10px] font-extrabold text-gray-500 mt-1">${c.label}</span>`;
+                mBtn.onclick = () => { document.getElementById(`cat-btn-${c.id}`).click(); };
+                mCatContainer.appendChild(mBtn);
+            });
+            syncMobileUI();
+            updateInitTempLabel(22); 
+        }
+
+        function selectCategory(catId, btnEl, hoodAction) {
+            state.category = catId; state.cut = null; state.doneness = null; state.hoodFinishAction = hoodAction;
+            Array.from(document.getElementById('grid-category').children).forEach(b => { b.classList.remove('glow', 'bg-slate-600'); b.classList.add('bg-slate-700'); });
+            btnEl.classList.add('glow', 'bg-slate-600');
+            
+            const cutGrid = document.getElementById('grid-cut'); cutGrid.innerHTML = '';
+            config.cuts[catId].forEach(cut => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-slate-700 hover:bg-slate-600 py-1.5 px-1 rounded border border-slate-600 text-[10px] sm:text-[11px] transition-all w-full leading-tight';
+                btn.innerText = cut;
+                btn.onclick = () => selectCut(cut, btn);
+                cutGrid.appendChild(btn);
+            });
+            document.getElementById('step-cut').classList.remove('hidden');
+            setTimeout(() => document.getElementById('step-cut').classList.remove('opacity-0'), 50);
+            
+            document.getElementById('step-doneness').classList.add('hidden', 'opacity-0');
+            document.getElementById('step-action').classList.add('hidden');
+            
+            syncMobileUI();
+            updateETA();
+        }
+
+        function selectCut(cutName, btnEl) {
+            state.cut = cutName; state.doneness = null;
+            Array.from(document.getElementById('grid-cut').children).forEach(b => { b.classList.remove('glow', 'bg-slate-600'); });
+            btnEl.classList.add('glow', 'bg-slate-600');
+            
+            const doneGrid = document.getElementById('grid-doneness'); doneGrid.innerHTML = '';
+            const doneOptions = getDonenessOptions(state.category, state.cut);
+            
+            doneOptions.forEach(d => {
+                const btn = document.createElement('button');
+                if(d.active) {
+                    btn.className = 'bg-slate-700 hover:bg-slate-600 py-1.5 rounded border border-slate-600 text-[10px] transition-all w-full font-bold text-white';
+                    btn.innerText = d.label;
+                    btn.onclick = () => selectDoneness(d.label, btn);
+                } else {
+                    btn.className = 'disabled-slot py-1.5 rounded border border-slate-700 text-[10px] w-full text-center';
+                    btn.innerText = d.label; btn.disabled = true;
+                }
+                doneGrid.appendChild(btn);
+            });
+            document.getElementById('step-doneness').classList.remove('hidden');
+            setTimeout(() => document.getElementById('step-doneness').classList.remove('opacity-0'), 50);
+
+            // [핵심 로직] UX 자동화: 부위 선택 시 기본 굽기 자동 선택 처리
+            const validOptions = doneOptions.filter(d => d.active && d.label !== '-');
+            let targetDone = null;
+            
+            if (validOptions.length === 1) {
+                targetDone = validOptions[0].label; 
+            } else {
+                const medRare = validOptions.find(d => d.label === '미디엄 레어');
+                if (medRare) targetDone = '미디엄 레어'; 
+                else if (validOptions.length > 0) targetDone = validOptions[0].label; 
+            }
+
+            if (targetDone) {
+                const btnToClick = Array.from(doneGrid.children).find(b => b.innerText === targetDone);
+                if (btnToClick) btnToClick.click(); 
+            } else {
+                document.getElementById('step-action').classList.add('hidden');
+                syncMobileUI();
+            }
+        }
+
+        function selectDoneness(doneName, btnEl) {
+            state.doneness = doneName;
+            Array.from(document.getElementById('grid-doneness').children).forEach(b => { b.classList.remove('glow', 'bg-slate-600'); });
+            if(btnEl) btnEl.classList.add('glow', 'bg-slate-600');
+            document.getElementById('step-action').classList.remove('hidden');
+            
+            syncMobileUI();
+            updateETA();
+        }
+
+        function startSimulation() {
+            if(!state.category || !state.cut || !state.doneness) return;
+
+            document.getElementById('ui-overlay').classList.remove('hidden');
+            document.getElementById('ui-overlay').classList.add('flex');
+
+            const sliderVal = parseInt(document.getElementById('test-thickness').value);
+            const finalThickness = sliderVal === 0 ? Math.floor(Math.random() * 15) + 20 : sliderVal;
+            document.getElementById('val-thickness').innerText = finalThickness;
+            
+            const startTemp = parseFloat(document.getElementById('test-init-temp').value);
+            thermalMetrics.currentMaterialTemp = startTemp;
+
+            // 전체 타임라인 계산 매핑
+            t1 = 10; // 측정/대기 10초
+            t2 = t1 + calculatedPhaseTimes.temper;
+            t3 = t2 + calculatedPhaseTimes.cook;
+            t4 = t3 + calculatedPhaseTimes.finish;
+            totalSimTime = t4;
+            
+            const profile = getTempProfile(state.category, state.cut, state.doneness);
+            deviceState.cookStatus = 'cooking';
+            thermalMetrics.targetTempPull = profile.pull;
+            thermalMetrics.targetTempFinal = profile.final;
+            virtualTime = 0;
+            deviceState.currentPhase = 0;
+
+            timeScale = parseInt(document.querySelector('input[name="timeScale"]:checked').value);
+            document.getElementById('scale-badge').innerText = timeScale + 'x Speed';
+
+            document.getElementById('m-btn-start').disabled = true;
+            document.getElementById('m-btn-start').classList.add('hidden');
+            document.getElementById('m-btn-stop').classList.remove('hidden');
+            document.getElementById('m-btn-stop').innerText = '가열 중단 / 취소';
+            document.getElementById('m-status-text').innerText = '가열 중';
+
+            addLog(`[Logic] 부위특성: ${profile.desc}`, 'text-amber-400 font-bold');
+            addLog(`[System] 초기온도: ${startTemp}℃ ➔ 템페링 목표: ${Math.max(startTemp, 8).toFixed(1)}℃`, 'text-amber-300 font-bold');
+            addLog(`[System] 가열중단: ${thermalMetrics.targetTempPull}℃ ➔ 최종: ${thermalMetrics.targetTempFinal}℃`, 'text-emerald-400 font-bold');
+
+            ['idle', 'temper', 'cook', 'finish'].forEach(id => {
+                document.getElementById('mcu-' + id).className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center';
+                document.getElementById('mcu-' + id).style.boxShadow = 'none';
+            });
+            
+            document.getElementById('val-temp').innerText = startTemp.toFixed(1);
+            document.getElementById('temp-alert').classList.add('hidden');
+            document.getElementById('val-temp').classList.remove('text-amber-400', 'text-red-400');
+
+            if(simTick) clearInterval(simTick);
+            simTick = setInterval(engineTick, 100);
+        }
+
+        function resetSimulation() {
+            if(simTick) clearInterval(simTick);
+            deviceState.cookStatus = 'idle';
+            
+            document.getElementById('ui-overlay').classList.add('hidden');
+            document.getElementById('ui-overlay').classList.remove('flex');
+            
+            document.getElementById('total-progress').style.width = '0%';
+            document.getElementById('val-time').innerText = '00:00';
+            
+            // 리셋 시 시작 온도로 원복
+            const startTemp = parseFloat(document.getElementById('test-init-temp').value);
+            document.getElementById('val-temp').innerText = startTemp.toFixed(1);
+            document.getElementById('m-temp').innerText = startTemp.toFixed(1);
+            
+            setPWM(0,0);
+            setHood('완전 개방<br>(100%)', 'bg-slate-800 border-slate-600 text-slate-300');
+            
+            document.getElementById('m-btn-start').classList.remove('hidden');
+            document.getElementById('m-btn-stop').classList.add('hidden');
+            
+            // 굽기 설정이 유효하면 시작 버튼 활성화
+            if (state.category && state.cut && state.doneness) {
+                document.getElementById('m-btn-start').disabled = false;
+            }
+
+            document.getElementById('m-status-text').innerText = '대기 중';
+            document.getElementById('m-status-text').className = 'text-[12px] font-bold text-[#0381FE] mt-1';
+            
+            // 모바일 링 리셋 (circumference 263.89)
+            document.getElementById('m-ring').style.strokeDashoffset = 263.89;
+            document.getElementById('m-ring').setAttribute('stroke', '#0381FE');
+            
+            ['idle', 'temper', 'cook', 'finish'].forEach(id => {
+                document.getElementById('mcu-' + id).className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center';
+                document.getElementById('mcu-' + id).style.boxShadow = 'none';
+            });
+
+            updateETA(); 
+            addLog(`[System] Simulation Cancelled/Reset.`, 'text-amber-400');
+        }
+
+        function engineTick() {
+            timeScale = parseInt(document.querySelector('input[name="timeScale"]:checked').value);
+            document.getElementById('scale-badge').innerText = timeScale + 'x Speed';
+            
+            virtualTime += 0.1 * timeScale;
+            if (virtualTime >= totalSimTime) {
+                virtualTime = totalSimTime;
+                clearInterval(simTick);
+                triggerPhase(5);
+            }
+
+            thermalMetrics.remainingTimeSec = totalSimTime - virtualTime;
+            const m = Math.floor(virtualTime / 60);
+            const s = Math.floor(virtualTime % 60);
+            const timeStr = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            
+            document.getElementById('val-time').innerText = timeStr;
+            const progressPercent = (virtualTime / totalSimTime * 100);
+            document.getElementById('total-progress').style.width = progressPercent + '%';
+
+            const rm = Math.floor(thermalMetrics.remainingTimeSec / 60);
+            const rs = Math.floor(thermalMetrics.remainingTimeSec % 60);
+            document.getElementById('m-time-remain').innerText = `${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
+            document.getElementById('m-ring').style.strokeDashoffset = 263.89 - (263.89 * (progressPercent / 100));
+
+            const startTemp = parseFloat(document.getElementById('test-init-temp').value);
+            let currentTemp = startTemp;
+
+            // 페이즈 도달 시점 트리거 및 온도 매핑
+            if (virtualTime < t1) {
+                if(deviceState.currentPhase !== 1) triggerPhase(1);
+                currentTemp = startTemp;
+            } 
+            else if (virtualTime < t2) {
+                if(deviceState.currentPhase !== 2) triggerPhase(2);
+                let p = (virtualTime - t1) / (t2 - t1);
+                let tBase = Math.max(startTemp, 8.0);
+                currentTemp = startTemp + (tBase - startTemp) * p; 
+            } 
+            else if (virtualTime < t3) {
+                if(deviceState.currentPhase !== 3) triggerPhase(3);
+                let p = (virtualTime - t2) / (t3 - t2);
+                let baseTemp = Math.max(startTemp, 8.0);
+                currentTemp = baseTemp + (thermalMetrics.targetTempPull - baseTemp) * p; 
+            } 
+            else if (virtualTime <= t4) {
+                if(deviceState.currentPhase !== 4) triggerPhase(4);
+                let p = (virtualTime - t3) / (t4 - t3);
+                currentTemp = thermalMetrics.targetTempPull + (thermalMetrics.targetTempFinal - thermalMetrics.targetTempPull) * p;
+            }
+
+            thermalMetrics.currentMaterialTemp = currentTemp;
+            const tempStr = currentTemp.toFixed(1);
+            
+            const tempEl = document.getElementById('val-temp');
+            tempEl.innerText = tempStr;
+            document.getElementById('m-temp').innerText = tempStr;
+
+            let ringColor = '#0381FE';
+            if (currentTemp > 45) ringColor = '#F59E0B';
+            if (currentTemp > 65) ringColor = '#EF4444';
+            document.getElementById('m-ring').setAttribute('stroke', ringColor);
+
+            if(deviceState.currentPhase === 3) tempEl.classList.add('text-amber-400');
+            if(deviceState.currentPhase === 4) {
+                tempEl.classList.remove('text-amber-400');
+                if(thermalMetrics.targetTempPull !== thermalMetrics.targetTempFinal) tempEl.classList.add('text-red-400'); 
+            }
+        }
+
+        function triggerPhase(phaseNum) {
+            deviceState.currentPhase = phaseNum;
+
+            if(phaseNum === 1) {
+                setMCUState('mcu-idle', 'bg-blue-600 border-blue-400 text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.8)]');
+                setPWM(0, 0); 
+                setHood('측정/밀폐<br>(0%)', 'bg-slate-800 border-blue-500 text-blue-300');
+                addLog(`[MCU] Phase 1: Interlock Check & Thickness Measurement OK.`);
+            }
+            if(phaseNum === 2) {
+                setMCUState('mcu-temper', 'bg-amber-600 border-amber-400 text-white font-bold shadow-[0_0_10px_rgba(217,119,6,0.8)]');
+                document.getElementById('mcu-idle').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
+                
+                let pwmT = 30, pwmB = 40;
+                if(state.category === 'grains') { pwmT = 20; pwmB = 100; } 
+                setPWM(pwmT, pwmB);
+                
+                setHood('완전 밀폐<br>(0%)', 'bg-slate-800 border-amber-500 text-amber-300');
+                
+                const sT = parseFloat(document.getElementById('test-init-temp').value);
+                if(sT < 8.0) addLog(`[MCU] Phase 2: 초기온도(${sT}℃) 보정을 위한 Active IR 템페링 가동.`);
+                else addLog(`[MCU] Phase 2: 최적 온도 도달. 상태 안정화 수행.`);
+            }
+            if(phaseNum === 3) {
+                setMCUState('mcu-cook', 'bg-red-600 border-red-400 text-white font-bold shadow-[0_0_10px_rgba(220,38,38,0.8)]');
+                document.getElementById('mcu-temper').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
+                
+                let pwmT = 80, pwmB = 80;
+                if(state.category === 'beef') { pwmT = 100; pwmB = 100; }
+                else if(state.category === 'seafood') { pwmT = 60; pwmB = 50; }
+                else if(state.category === 'grains') { pwmT = 30; pwmB = 100; }
+                
+                setPWM(pwmT, pwmB);
+                setHood('완전 밀폐<br>(0%)', 'bg-slate-800 border-red-500 text-red-300');
+                addLog(`[MCU] Phase 3: Main Heating Started (Top ${pwmT}%, Btm ${pwmB}%).`);
+            }
+            if(phaseNum === 4) {
+                deviceState.cookStatus = 'resting';
+                setMCUState('mcu-finish', 'bg-purple-600 border-purple-400 text-white font-bold shadow-[0_0_10px_rgba(147,51,234,0.8)]');
+                document.getElementById('mcu-cook').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
+                
+                setPWM(0, 0);
+                document.getElementById('temp-alert').classList.remove('hidden');
+                
+                let hClass = state.hoodFinishAction.includes('미세개방') ? 'bg-slate-700 border-sky-400 text-sky-300' :
+                             state.hoodFinishAction.includes('정온') ? 'bg-slate-700 border-amber-400 text-amber-300' : 'bg-slate-700 border-purple-400 text-purple-300';
+                
+                let hoodPcnt = '0%';
+                if(state.hoodFinishAction.includes('미세개방')) hoodPcnt = '15%';
+                else if(state.hoodFinishAction.includes('완전개방')) hoodPcnt = '100%';
+                
+                setHood(`${state.hoodFinishAction.replace(' ', '<br>')}<br>(${hoodPcnt})`, hClass);
+                
+                document.getElementById('m-status-text').innerText = '레스팅 중 (잔열)';
+                document.getElementById('m-status-text').className = 'text-[12px] font-bold text-purple-500 mt-1';
+                
+                addLog(`[Physics] 가열 중단 온도 도달! (${state.hoodFinishAction} 동작)`, 'text-red-400 font-bold');
+            }
+            if(phaseNum === 5) {
+                deviceState.cookStatus = 'completed';
+                addLog(`[System] 조리 완료 및 클라우드 동기화 성공.`, 'text-sky-300');
+                document.getElementById('mcu-finish').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
+                document.getElementById('temp-alert').classList.add('hidden');
+                
+                setHood(`완전 개방<br>(100%)`, 'bg-slate-800 border-emerald-500 text-emerald-300');
+                
+                document.getElementById('ui-overlay').querySelector('.text-sky-400').innerText = '✨ 조리 완료!';
+                document.getElementById('m-status-text').innerText = '조리 완료!';
+                document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-[#0381FE] mt-1 animate-pulse';
+                document.getElementById('m-btn-stop').innerText = '확인 (초기화)';
+                document.getElementById('m-btn-stop').className = 'w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors';
+            }
+        }
+
+        function setMCUState(id, classString) { document.getElementById(id).className = `p-1.5 rounded border transition-all duration-300 flex justify-between items-center ${classString}`; }
+        function setPWM(top, bottom) { document.getElementById('pwm-top-txt').innerText = top + '%'; document.getElementById('pwm-bottom-txt').innerText = bottom + '%'; document.getElementById('pwm-top').style.height = top + '%'; document.getElementById('pwm-bottom').style.height = bottom + '%'; }
+        function setHood(text, colorClass) { document.getElementById('hw-hood').className = `w-[35%] rounded flex flex-col justify-center items-center h-full border-2 transition-colors ${colorClass}`; document.getElementById('hood-status').innerHTML = text; }
+        function addLog(msg, color = 'text-slate-400') {
+            const c = document.getElementById('log-container');
+            const time = new Date().toLocaleTimeString('en-US', {hour12:false});
+            c.innerHTML += `<div class="${color} mb-1 border-b border-slate-800 pb-1">[${time}] ${msg}</div>`;
+            c.scrollTop = c.scrollHeight;
+        }
+        function clearLog() { document.getElementById('log-container').innerHTML = ''; }
+
+        initUI();
+    </script>
+</body>
+</html>
