@@ -51,16 +51,6 @@
                 <button onclick="resetSimulation()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">중지 및 초기화</button>
             </div>
 
-            <div id="emergency-overlay" class="absolute inset-0 bg-red-950/90 z-30 hidden flex-col items-center justify-center backdrop-blur-sm">
-                <div class="text-4xl mb-2 animate-pulse">🚨</div>
-                <div class="text-red-300 text-lg font-bold mb-2">과열 감지! 안전모드 작동</div>
-                <div class="text-slate-300 text-xs text-center px-4 mb-4">AI가 즉시 히터 출력을 차단하고<br>후드를 완전 개방했습니다.<br>주변 상황을 확인한 후 재개해주세요.</div>
-                <div class="flex gap-2">
-                    <button onclick="resumeFromEmergency()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded font-bold">✅ 안전 확인 후 재개</button>
-                    <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">⏹ 조리 중지</button>
-                </div>
-            </div>
-
             <div class="bg-slate-800 p-2.5 border-b border-slate-700 font-bold text-sm text-purple-400 flex items-center gap-2">
                 🖥️ Device UI (LCD Panel)
             </div>
@@ -258,6 +248,19 @@
                         <div class="text-[12px] font-bold text-gray-900 leading-snug" id="golden-time-text">지금 버터를 올려 베이스팅하세요!</div>
                     </div>
                     <div id="golden-time-countdown" class="text-[11px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full shrink-0">15</div>
+                </div>
+
+                <!-- Emergency AI Alert (One UI system alert style) -->
+                <div id="m-emergency-overlay" class="hidden absolute inset-0 z-40 bg-black/50 backdrop-blur-sm items-center justify-center px-6">
+                    <div class="bg-white rounded-[24px] p-5 w-full shadow-2xl flex flex-col items-center text-center">
+                        <div class="text-4xl mb-2">🚨</div>
+                        <div class="text-red-600 text-[15px] font-extrabold mb-1.5">과열 감지! 안전모드 작동</div>
+                        <div class="text-gray-500 text-[11px] leading-relaxed mb-4">AI가 즉시 히터 출력을 차단하고<br>후드를 완전 개방했습니다.<br>주변 상황을 확인한 후 재개해주세요.</div>
+                        <div class="flex flex-col gap-2 w-full">
+                            <button onclick="resumeFromEmergency()" class="w-full bg-emerald-500 active:bg-emerald-600 text-white text-[13px] font-bold py-3 rounded-2xl transition-colors">✅ 안전 확인 후 재개</button>
+                            <button onclick="resetSimulation()" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[13px] font-bold py-3 rounded-2xl transition-colors">⏹ 조리 중지</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 1. Header -->
@@ -844,6 +847,7 @@
 
             document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
             document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
+            document.getElementById('overlay-desc').innerHTML = '디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.';
             document.getElementById('m-feedback-card').classList.add('hidden');
             document.getElementById('m-feedback-card').classList.remove('flex');
             document.getElementById('m-feedback-done-msg').classList.add('hidden');
@@ -887,8 +891,8 @@
 
             document.getElementById('ui-overlay').classList.add('hidden');
             document.getElementById('ui-overlay').classList.remove('flex');
-            document.getElementById('emergency-overlay').classList.add('hidden');
-            document.getElementById('emergency-overlay').classList.remove('flex');
+            document.getElementById('m-emergency-overlay').classList.add('hidden');
+            document.getElementById('m-emergency-overlay').classList.remove('flex');
             document.getElementById('golden-time-banner').classList.add('hidden');
             document.getElementById('golden-time-banner').classList.remove('flex');
             document.getElementById('m-feedback-card').classList.add('hidden');
@@ -1129,20 +1133,27 @@
             setPWM(0, 0);
             setHood('안전모드<br>완전개방 (100%)', 'bg-red-950 border-red-500 text-red-300');
 
-            document.getElementById('emergency-overlay').classList.remove('hidden');
-            document.getElementById('emergency-overlay').classList.add('flex');
-            document.getElementById('btn-emergency-test').disabled = true;
+            // 왼쪽 기기 패널: 짧은 상태 문구만 표시
+            document.getElementById('overlay-title').innerText = '⚠️ 안전모드 작동';
+            document.getElementById('overlay-title').className = 'text-red-400 text-lg font-bold mb-2 animate-pulse';
+            document.getElementById('overlay-desc').innerHTML = '히터 출력 차단 · 후드 완전개방<br>우측 모바일 앱에서 확인하세요.';
 
-            document.getElementById('m-status-text').innerText = '⚠️ 안전모드 작동';
-            document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-red-500 mt-1 animate-pulse';
+            // 오른쪽 모바일 앱: 안내 팝업 + 재개/중지 버튼
+            document.getElementById('m-emergency-overlay').classList.remove('hidden');
+            document.getElementById('m-emergency-overlay').classList.add('flex');
+            document.getElementById('btn-emergency-test').disabled = true;
 
             addLog(`[AI Safety] 🚨 과열 감지! 히터 강제 차단, 후드 완전개방. 안전모드 진입.`, 'text-red-400 font-bold');
         }
 
         function resumeFromEmergency() {
-            document.getElementById('emergency-overlay').classList.add('hidden');
-            document.getElementById('emergency-overlay').classList.remove('flex');
+            document.getElementById('m-emergency-overlay').classList.add('hidden');
+            document.getElementById('m-emergency-overlay').classList.remove('flex');
             document.getElementById('btn-emergency-test').disabled = false;
+
+            document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
+            document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
+            document.getElementById('overlay-desc').innerHTML = '디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.';
 
             deviceState.cookStatus = deviceState.preEmergencyStatus || 'cooking';
             document.getElementById('m-status-text').innerText = deviceState.cookStatus === 'resting' ? '레스팅 중 (잔열)' : '가열 중';
