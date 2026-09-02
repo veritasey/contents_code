@@ -30,12 +30,6 @@
 </head>
 <body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
 
-    <div id="golden-time-banner" class="hidden top-16 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-slate-900 font-bold text-sm px-5 py-2.5 rounded-full shadow-xl items-center gap-2 fixed">
-        <span id="golden-time-icon">🧈</span>
-        <span id="golden-time-text">지금 버터를 올려 베이스팅하세요!</span>
-        <span id="golden-time-countdown" class="bg-slate-900 text-amber-300 text-xs font-mono px-2 py-0.5 rounded-full">15</span>
-    </div>
-
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
             <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V7.8.1</h1>
@@ -54,17 +48,6 @@
             <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
                 <div id="overlay-title" class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
                 <div id="overlay-desc" class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
-
-                <div id="feedback-panel" class="hidden flex-col items-center mt-3 gap-2">
-                    <div class="text-[11px] text-slate-300 font-bold">이번 굽기, 어떠셨나요?</div>
-                    <div class="flex gap-2">
-                        <button onclick="submitFeedback(-1)" class="bg-slate-700 hover:bg-sky-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">🥶 덜 익음</button>
-                        <button onclick="submitFeedback(0)" class="bg-slate-700 hover:bg-emerald-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">👍 딱 좋음</button>
-                        <button onclick="submitFeedback(1)" class="bg-slate-700 hover:bg-red-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">🔥 더 익음</button>
-                    </div>
-                    <div id="feedback-done-msg" class="hidden text-[10px] text-sky-400 font-bold mt-1">✅ 반영 완료! 다음 조리부터 적용됩니다.</div>
-                </div>
-
                 <button onclick="resetSimulation()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">중지 및 초기화</button>
             </div>
 
@@ -122,13 +105,6 @@
                             <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="50" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x50</span></label>
                             <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="100" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x100</span></label>
                         </div>
-                    </div>
-
-                    <!-- Emergency Test -->
-                    <div class="border-t border-slate-700 pt-2">
-                        <button onclick="triggerEmergency()" class="w-full bg-red-900/30 hover:bg-red-900/60 border border-red-800 text-red-300 text-[10px] font-bold py-2 rounded transition-colors">
-                            🚨 [Test] 돌발상황 시뮬레이션 (과열 감지)
-                        </button>
                     </div>
                 </div>
 
@@ -246,8 +222,11 @@
                         <span class="text-[9px] font-bold text-center leading-tight" id="hood-status">완전 개방<br>(100%)</span>
                     </div>
                 </div>
+                <button onclick="triggerEmergency()" id="btn-emergency-test" disabled class="w-full mt-2 bg-red-900/30 hover:bg-red-900/60 border border-red-800 text-red-300 text-[10px] font-bold py-2 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-900/30">
+                    🚨 [Test] 돌발상황 시뮬레이션 (과열 감지)
+                </button>
             </div>
-            
+
             <!-- 4. Log Terminal -->
             <div class="panel rounded-xl flex flex-col flex-1 min-h-0 border-l-4 border-slate-500">
                 <div class="bg-slate-800 p-2 border-b border-slate-700 font-bold text-xs text-slate-300 flex justify-between items-center">
@@ -269,6 +248,16 @@
                 <div class="flex justify-between items-center px-5 pt-2 pb-1 text-[11px] font-bold text-gray-800 bg-[#F4F4F4] z-10">
                     <span>9:41</span>
                     <div class="flex gap-1.5"><span>📶</span><span>🔋</span></div>
+                </div>
+
+                <!-- Golden-time Push Notification (One UI heads-up style) -->
+                <div id="golden-time-banner" class="hidden absolute top-9 left-3 right-3 z-30 bg-white/95 backdrop-blur rounded-2xl shadow-2xl px-3.5 py-3 items-center gap-3 border border-black/5">
+                    <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-base shrink-0" id="golden-time-icon">🧈</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[10px] font-bold text-gray-500">그래핀 스마트 쿠커 · 방금</div>
+                        <div class="text-[12px] font-bold text-gray-900 leading-snug" id="golden-time-text">지금 버터를 올려 베이스팅하세요!</div>
+                    </div>
+                    <div id="golden-time-countdown" class="text-[11px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full shrink-0">15</div>
                 </div>
 
                 <!-- 1. Header -->
@@ -296,6 +285,17 @@
                                 <span class="text-[12px] font-bold text-gray-500 mt-2" id="m-time-remain">00:00</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 2.5 Personalize AI Feedback Card (조리 완료 후에만 표시) -->
+                    <div id="m-feedback-card" class="hidden bg-white rounded-[20px] p-4 mb-3 one-ui-shadow flex-col items-center">
+                        <h3 class="text-[13px] font-bold text-gray-800 mb-3">🎯 이번 굽기, 어떠셨나요?</h3>
+                        <div class="flex gap-2 w-full">
+                            <button onclick="submitFeedback(-1)" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">🥶 덜 익음</button>
+                            <button onclick="submitFeedback(0)" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">👍 딱 좋음</button>
+                            <button onclick="submitFeedback(1)" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">🔥 더 익음</button>
+                        </div>
+                        <div id="m-feedback-done-msg" class="hidden text-[11px] text-[#0381FE] font-bold mt-3">✅ 반영 완료! 다음 조리부터 자동 적용됩니다.</div>
                     </div>
 
                     <!-- 3. Control Cards -->
@@ -326,6 +326,7 @@
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                             </div>
                         </div>
+                        <div id="m-personalize-badge" class="hidden text-[10px] text-[#0381FE] font-bold mt-2.5 bg-[#EAF3FF] px-2.5 py-1.5 rounded-xl text-center"></div>
                     </div>
                 </div>
 
@@ -477,13 +478,24 @@
 
         function updatePersonalizeBadge() {
             const badge = document.getElementById('personalize-badge');
-            if(!badge) return;
-            if(!state.category || !state.cut || !state.doneness) { badge.classList.add('hidden'); return; }
+            const mBadge = document.getElementById('m-personalize-badge');
+            if(!badge && !mBadge) return;
+
+            if(!state.category || !state.cut || !state.doneness) {
+                if(badge) badge.classList.add('hidden');
+                if(mBadge) mBadge.classList.add('hidden');
+                return;
+            }
             const count = getPersonalFeedbackCount(state.category, state.cut, state.doneness);
-            if(count === 0) { badge.classList.add('hidden'); return; }
+            if(count === 0) {
+                if(badge) badge.classList.add('hidden');
+                if(mBadge) mBadge.classList.add('hidden');
+                return;
+            }
             const offset = getPersonalOffset(state.category, state.cut, state.doneness);
-            badge.classList.remove('hidden');
-            badge.innerText = `🎯 개인화 학습 적용됨: ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C (피드백 ${count}회 반영)`;
+            const text = `🎯 개인화 학습 적용됨: ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C (피드백 ${count}회 반영)`;
+            if(badge) { badge.classList.remove('hidden'); badge.innerText = text; }
+            if(mBadge) { mBadge.classList.remove('hidden'); mBadge.innerText = text; }
         }
 
         function submitFeedback(direction) {
@@ -498,8 +510,8 @@
             localStorage.setItem(key, offset.toFixed(1));
             localStorage.setItem(key + '_count', (count + 1).toString());
 
-            document.getElementById('feedback-done-msg').classList.remove('hidden');
-            document.querySelectorAll('#feedback-panel button[onclick^="submitFeedback"]').forEach(b => b.disabled = true);
+            document.getElementById('m-feedback-done-msg').classList.remove('hidden');
+            document.querySelectorAll('#m-feedback-card button[onclick^="submitFeedback"]').forEach(b => b.disabled = true);
             addLog(`[Personalize AI] 피드백 반영: 오프셋 ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C 저장 (이 조합 누적 ${count + 1}회)`, 'text-sky-300 font-bold');
         }
 
@@ -826,10 +838,12 @@
 
             document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
             document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
-            document.getElementById('feedback-panel').classList.add('hidden');
-            document.getElementById('feedback-panel').classList.remove('flex');
-            document.getElementById('feedback-done-msg').classList.add('hidden');
-            document.querySelectorAll('#feedback-panel button[onclick^="submitFeedback"]').forEach(b => b.disabled = false);
+            document.getElementById('m-feedback-card').classList.add('hidden');
+            document.getElementById('m-feedback-card').classList.remove('flex');
+            document.getElementById('m-feedback-done-msg').classList.add('hidden');
+            document.querySelectorAll('#m-feedback-card button[onclick^="submitFeedback"]').forEach(b => b.disabled = false);
+
+            document.getElementById('btn-emergency-test').disabled = false;
 
             timeScale = parseInt(document.querySelector('input[name="timeScale"]:checked').value);
             document.getElementById('scale-badge').innerText = timeScale + 'x Speed';
@@ -871,6 +885,9 @@
             document.getElementById('emergency-overlay').classList.remove('flex');
             document.getElementById('golden-time-banner').classList.add('hidden');
             document.getElementById('golden-time-banner').classList.remove('flex');
+            document.getElementById('m-feedback-card').classList.add('hidden');
+            document.getElementById('m-feedback-card').classList.remove('flex');
+            document.getElementById('btn-emergency-test').disabled = true;
 
             document.getElementById('total-progress').style.width = '0%';
             document.getElementById('val-time').innerText = '00:00';
@@ -1045,12 +1062,13 @@
                 setHood(`완전 개방<br>(100%)`, 'bg-slate-800 border-emerald-500 text-emerald-300');
 
                 document.getElementById('overlay-title').innerText = '✨ 조리 완료!';
-                document.getElementById('feedback-panel').classList.remove('hidden');
-                document.getElementById('feedback-panel').classList.add('flex');
+                document.getElementById('m-feedback-card').classList.remove('hidden');
+                document.getElementById('m-feedback-card').classList.add('flex');
                 document.getElementById('m-status-text').innerText = '조리 완료!';
                 document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-[#0381FE] mt-1 animate-pulse';
                 document.getElementById('m-btn-stop').innerText = '확인 (초기화)';
                 document.getElementById('m-btn-stop').className = 'w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors';
+                document.getElementById('btn-emergency-test').disabled = true;
             }
         }
 
@@ -1093,6 +1111,7 @@
 
         // [돌발상황 AI 대처] 실제 센서가 없는 데모 환경이라, 테스트 버튼으로 과열 상황을 인위적으로 발생시킵니다.
         function triggerEmergency() {
+            if(deviceState.cookStatus === 'emergency') return; // 이미 안전모드 작동 중
             if(deviceState.cookStatus !== 'cooking' && deviceState.cookStatus !== 'resting') {
                 addLog(`[AI Safety] 조리 중에만 돌발상황 테스트가 가능합니다.`, 'text-slate-500');
                 return;
@@ -1106,6 +1125,7 @@
 
             document.getElementById('emergency-overlay').classList.remove('hidden');
             document.getElementById('emergency-overlay').classList.add('flex');
+            document.getElementById('btn-emergency-test').disabled = true;
 
             document.getElementById('m-status-text').innerText = '⚠️ 안전모드 작동';
             document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-red-500 mt-1 animate-pulse';
@@ -1116,6 +1136,7 @@
         function resumeFromEmergency() {
             document.getElementById('emergency-overlay').classList.add('hidden');
             document.getElementById('emergency-overlay').classList.remove('flex');
+            document.getElementById('btn-emergency-test').disabled = false;
 
             deviceState.cookStatus = deviceState.preEmergencyStatus || 'cooking';
             document.getElementById('m-status-text').innerText = deviceState.cookStatus === 'resting' ? '레스팅 중 (잔열)' : '가열 중';
