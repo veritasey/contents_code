@@ -30,6 +30,12 @@
 </head>
 <body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
 
+    <div id="golden-time-banner" class="hidden top-16 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-slate-900 font-bold text-sm px-5 py-2.5 rounded-full shadow-xl items-center gap-2 fixed">
+        <span id="golden-time-icon">🧈</span>
+        <span id="golden-time-text">지금 버터를 올려 베이스팅하세요!</span>
+        <span id="golden-time-countdown" class="bg-slate-900 text-amber-300 text-xs font-mono px-2 py-0.5 rounded-full">15</span>
+    </div>
+
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
             <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V7.8.1</h1>
@@ -46,9 +52,30 @@
         <!-- COLUMN 1: Device LCD UI -->
         <section class="panel rounded-xl flex flex-col overflow-hidden relative">
             <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
-                <div class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
-                <div class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
+                <div id="overlay-title" class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
+                <div id="overlay-desc" class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
+
+                <div id="feedback-panel" class="hidden flex-col items-center mt-3 gap-2">
+                    <div class="text-[11px] text-slate-300 font-bold">이번 굽기, 어떠셨나요?</div>
+                    <div class="flex gap-2">
+                        <button onclick="submitFeedback(-1)" class="bg-slate-700 hover:bg-sky-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">🥶 덜 익음</button>
+                        <button onclick="submitFeedback(0)" class="bg-slate-700 hover:bg-emerald-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">👍 딱 좋음</button>
+                        <button onclick="submitFeedback(1)" class="bg-slate-700 hover:bg-red-700 text-[10px] px-3 py-2 rounded border border-slate-600 transition-colors">🔥 더 익음</button>
+                    </div>
+                    <div id="feedback-done-msg" class="hidden text-[10px] text-sky-400 font-bold mt-1">✅ 반영 완료! 다음 조리부터 적용됩니다.</div>
+                </div>
+
                 <button onclick="resetSimulation()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">중지 및 초기화</button>
+            </div>
+
+            <div id="emergency-overlay" class="absolute inset-0 bg-red-950/90 z-30 hidden flex-col items-center justify-center backdrop-blur-sm">
+                <div class="text-4xl mb-2 animate-pulse">🚨</div>
+                <div class="text-red-300 text-lg font-bold mb-2">과열 감지! 안전모드 작동</div>
+                <div class="text-slate-300 text-xs text-center px-4 mb-4">AI가 즉시 히터 출력을 차단하고<br>후드를 완전 개방했습니다.<br>주변 상황을 확인한 후 재개해주세요.</div>
+                <div class="flex gap-2">
+                    <button onclick="resumeFromEmergency()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded font-bold">✅ 안전 확인 후 재개</button>
+                    <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">⏹ 조리 중지</button>
+                </div>
             </div>
 
             <div class="bg-slate-800 p-2.5 border-b border-slate-700 font-bold text-sm text-purple-400 flex items-center gap-2">
@@ -96,6 +123,13 @@
                             <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="100" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x100</span></label>
                         </div>
                     </div>
+
+                    <!-- Emergency Test -->
+                    <div class="border-t border-slate-700 pt-2">
+                        <button onclick="triggerEmergency()" class="w-full bg-red-900/30 hover:bg-red-900/60 border border-red-800 text-red-300 text-[10px] font-bold py-2 rounded transition-colors">
+                            🚨 [Test] 돌발상황 시뮬레이션 (과열 감지)
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -115,6 +149,7 @@
 
                 <div id="step-action" class="hidden mt-auto pt-2">
                     <div class="text-center text-[10px] font-mono font-bold text-sky-400 mb-1.5 bg-slate-800 p-1.5 rounded" id="eta-preview">예상 소요 시간 계산 중...</div>
+                    <div id="personalize-badge" class="hidden text-center text-[9px] text-sky-300 font-mono bg-slate-900 border border-sky-900 px-2 py-1 rounded mb-1.5"></div>
                     <button onclick="startSimulation()" id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors">
                         🔥 조리 시작 (Start Cooking)
                     </button>
@@ -330,7 +365,18 @@
         let simTick = null;
         let virtualTime = 0;
         let totalSimTime = 0;
-        let t1 = 0, t2 = 0, t3 = 0, t4 = 0; 
+        let t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+
+        let goldenTimeTriggered = false;
+        let goldenTimeInterval = null;
+        const goldenTimeConfig = {
+            beef: { icon: '🧈', text: '지금 버터를 올려 베이스팅하세요!' },
+            pork: { icon: '🧈', text: '지금 버터를 올려 베이스팅하세요!' },
+            chicken: { icon: '🧈', text: '지금 버터/허브를 올려 베이스팅하세요!' },
+            seafood: { icon: '🌿', text: '지금 허브/레몬버터를 올려주세요!' },
+            veges: { icon: '🧂', text: '지금 마무리 양념을 더해주세요!' },
+            grains: { icon: '🧂', text: '지금 간을 맞춰주세요!' }
+        };
 
         const config = {
             categories: [
@@ -404,6 +450,59 @@
             return { pull: 60, final: 60, desc: "기본 조리" };
         }
 
+        function getPersonalKey(cat, cut, done) {
+            return `minmax_pref_${cat}_${cut}_${done}`.replace(/\s+/g, '_');
+        }
+
+        function getPersonalOffset(cat, cut, done) {
+            if(!cat || !cut || !done) return 0;
+            const raw = localStorage.getItem(getPersonalKey(cat, cut, done));
+            return raw ? parseFloat(raw) : 0;
+        }
+
+        function getPersonalFeedbackCount(cat, cut, done) {
+            if(!cat || !cut || !done) return 0;
+            const raw = localStorage.getItem(getPersonalKey(cat, cut, done) + '_count');
+            return raw ? parseInt(raw) : 0;
+        }
+
+        // [개인화 학습 AI] 실제 ML 모델이 아니라, 사용자 피드백(±0.5°C)을 누적 저장해
+        // 다음 조리 시 목표 온도에 반영하는 규칙 기반 로직입니다.
+        function getPersonalizedProfile(cat, cut, done) {
+            const base = getTempProfile(cat, cut, done);
+            const offset = getPersonalOffset(cat, cut, done);
+            if(!offset) return { ...base, offset: 0 };
+            return { pull: base.pull + offset, final: base.final + offset, desc: base.desc, offset };
+        }
+
+        function updatePersonalizeBadge() {
+            const badge = document.getElementById('personalize-badge');
+            if(!badge) return;
+            if(!state.category || !state.cut || !state.doneness) { badge.classList.add('hidden'); return; }
+            const count = getPersonalFeedbackCount(state.category, state.cut, state.doneness);
+            if(count === 0) { badge.classList.add('hidden'); return; }
+            const offset = getPersonalOffset(state.category, state.cut, state.doneness);
+            badge.classList.remove('hidden');
+            badge.innerText = `🎯 개인화 학습 적용됨: ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C (피드백 ${count}회 반영)`;
+        }
+
+        function submitFeedback(direction) {
+            if(!state.category || !state.cut || !state.doneness) return;
+            let offset = getPersonalOffset(state.category, state.cut, state.doneness);
+            let count = getPersonalFeedbackCount(state.category, state.cut, state.doneness);
+
+            if(direction === -1) offset = Math.min(3, offset + 0.5);   // 덜 익음 -> 다음엔 더 익히기
+            if(direction === 1) offset = Math.max(-3, offset - 0.5);  // 더 익음 -> 다음엔 덜 익히기
+
+            const key = getPersonalKey(state.category, state.cut, state.doneness);
+            localStorage.setItem(key, offset.toFixed(1));
+            localStorage.setItem(key + '_count', (count + 1).toString());
+
+            document.getElementById('feedback-done-msg').classList.remove('hidden');
+            document.querySelectorAll('#feedback-panel button[onclick^="submitFeedback"]').forEach(b => b.disabled = true);
+            addLog(`[Personalize AI] 피드백 반영: 오프셋 ${offset >= 0 ? '+' : ''}${offset.toFixed(1)}°C 저장 (이 조합 누적 ${count + 1}회)`, 'text-sky-300 font-bold');
+        }
+
         function getTemperTime(cat, initTemp) {
             if (!['beef', 'pork', 'chicken'].includes(cat)) return 30; // 템페링 미적용 군
             if (initTemp <= -20) return 4200; // 70분 (해동)
@@ -444,7 +543,7 @@
                 ['d-idle', 'd-temper', 'd-cook', 'd-finish'].forEach(id => document.getElementById(id).innerText = '--');
                 return;
             }
-            const profile = getTempProfile(state.category, state.cut, state.doneness);
+            const profile = getPersonalizedProfile(state.category, state.cut, state.doneness);
             const startTemp = parseFloat(document.getElementById('test-init-temp').value);
             const temperTarget = Math.max(startTemp, 8.0);
             
@@ -483,8 +582,9 @@
             if(deviceState.cookStatus === 'idle') {
                 document.getElementById('m-time-remain').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
             }
-            
+
             updateCoreEngineTargets();
+            updatePersonalizeBadge();
         }
 
         function updateThicknessLabel(val) {
@@ -712,12 +812,24 @@
             t4 = t3 + calculatedPhaseTimes.finish;
             totalSimTime = t4;
             
-            const profile = getTempProfile(state.category, state.cut, state.doneness);
+            const profile = getPersonalizedProfile(state.category, state.cut, state.doneness);
             deviceState.cookStatus = 'cooking';
             thermalMetrics.targetTempPull = profile.pull;
             thermalMetrics.targetTempFinal = profile.final;
             virtualTime = 0;
             deviceState.currentPhase = 0;
+
+            goldenTimeTriggered = false;
+            if(goldenTimeInterval) clearInterval(goldenTimeInterval);
+            document.getElementById('golden-time-banner').classList.add('hidden');
+            document.getElementById('golden-time-banner').classList.remove('flex');
+
+            document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
+            document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
+            document.getElementById('feedback-panel').classList.add('hidden');
+            document.getElementById('feedback-panel').classList.remove('flex');
+            document.getElementById('feedback-done-msg').classList.add('hidden');
+            document.querySelectorAll('#feedback-panel button[onclick^="submitFeedback"]').forEach(b => b.disabled = false);
 
             timeScale = parseInt(document.querySelector('input[name="timeScale"]:checked').value);
             document.getElementById('scale-badge').innerText = timeScale + 'x Speed';
@@ -731,6 +843,9 @@
             addLog(`[Logic] 부위특성: ${profile.desc}`, 'text-amber-400 font-bold');
             addLog(`[System] 초기온도: ${startTemp}℃ ➔ 템페링 목표: ${Math.max(startTemp, 8).toFixed(1)}℃`, 'text-amber-300 font-bold');
             addLog(`[System] 가열중단: ${thermalMetrics.targetTempPull}℃ ➔ 최종: ${thermalMetrics.targetTempFinal}℃`, 'text-emerald-400 font-bold');
+            if(profile.offset) {
+                addLog(`[Personalize AI] 개인화 오프셋 적용: ${profile.offset >= 0 ? '+' : ''}${profile.offset.toFixed(1)}°C`, 'text-sky-300 font-bold');
+            }
 
             ['idle', 'temper', 'cook', 'finish'].forEach(id => {
                 document.getElementById('mcu-' + id).className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center';
@@ -747,11 +862,16 @@
 
         function resetSimulation() {
             if(simTick) clearInterval(simTick);
+            if(goldenTimeInterval) clearInterval(goldenTimeInterval);
             deviceState.cookStatus = 'idle';
-            
+
             document.getElementById('ui-overlay').classList.add('hidden');
             document.getElementById('ui-overlay').classList.remove('flex');
-            
+            document.getElementById('emergency-overlay').classList.add('hidden');
+            document.getElementById('emergency-overlay').classList.remove('flex');
+            document.getElementById('golden-time-banner').classList.add('hidden');
+            document.getElementById('golden-time-banner').classList.remove('flex');
+
             document.getElementById('total-progress').style.width = '0%';
             document.getElementById('val-time').innerText = '00:00';
             
@@ -830,8 +950,9 @@
                 if(deviceState.currentPhase !== 3) triggerPhase(3);
                 let p = (virtualTime - t2) / (t3 - t2);
                 let baseTemp = Math.max(startTemp, 8.0);
-                currentTemp = baseTemp + (thermalMetrics.targetTempPull - baseTemp) * p; 
-            } 
+                currentTemp = baseTemp + (thermalMetrics.targetTempPull - baseTemp) * p;
+                if(p >= 0.85 && !goldenTimeTriggered) triggerGoldenTime();
+            }
             else if (virtualTime <= t4) {
                 if(deviceState.currentPhase !== 4) triggerPhase(4);
                 let p = (virtualTime - t3) / (t4 - t3);
@@ -922,8 +1043,10 @@
                 document.getElementById('temp-alert').classList.add('hidden');
                 
                 setHood(`완전 개방<br>(100%)`, 'bg-slate-800 border-emerald-500 text-emerald-300');
-                
-                document.getElementById('ui-overlay').querySelector('.text-sky-400').innerText = '✨ 조리 완료!';
+
+                document.getElementById('overlay-title').innerText = '✨ 조리 완료!';
+                document.getElementById('feedback-panel').classList.remove('hidden');
+                document.getElementById('feedback-panel').classList.add('flex');
                 document.getElementById('m-status-text').innerText = '조리 완료!';
                 document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-[#0381FE] mt-1 animate-pulse';
                 document.getElementById('m-btn-stop').innerText = '확인 (초기화)';
@@ -941,6 +1064,68 @@
             c.scrollTop = c.scrollHeight;
         }
         function clearLog() { document.getElementById('log-container').innerHTML = ''; }
+
+        function triggerGoldenTime() {
+            goldenTimeTriggered = true;
+            const cfg = goldenTimeConfig[state.category] || { icon: '🧂', text: '지금 마무리 양념 타이밍입니다!' };
+            document.getElementById('golden-time-icon').innerText = cfg.icon;
+            document.getElementById('golden-time-text').innerText = cfg.text;
+
+            const banner = document.getElementById('golden-time-banner');
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
+
+            let countdown = 15;
+            document.getElementById('golden-time-countdown').innerText = countdown;
+            addLog(`[AI] 🧈 골든타임 감지 (조리 진행률 85%): ${cfg.text}`, 'text-amber-300 font-bold');
+
+            if(goldenTimeInterval) clearInterval(goldenTimeInterval);
+            goldenTimeInterval = setInterval(() => {
+                countdown--;
+                document.getElementById('golden-time-countdown').innerText = countdown;
+                if(countdown <= 0) {
+                    clearInterval(goldenTimeInterval);
+                    banner.classList.add('hidden');
+                    banner.classList.remove('flex');
+                }
+            }, 1000);
+        }
+
+        // [돌발상황 AI 대처] 실제 센서가 없는 데모 환경이라, 테스트 버튼으로 과열 상황을 인위적으로 발생시킵니다.
+        function triggerEmergency() {
+            if(deviceState.cookStatus !== 'cooking' && deviceState.cookStatus !== 'resting') {
+                addLog(`[AI Safety] 조리 중에만 돌발상황 테스트가 가능합니다.`, 'text-slate-500');
+                return;
+            }
+            if(simTick) clearInterval(simTick);
+            deviceState.preEmergencyStatus = deviceState.cookStatus;
+            deviceState.cookStatus = 'emergency';
+
+            setPWM(0, 0);
+            setHood('안전모드<br>완전개방 (100%)', 'bg-red-950 border-red-500 text-red-300');
+
+            document.getElementById('emergency-overlay').classList.remove('hidden');
+            document.getElementById('emergency-overlay').classList.add('flex');
+
+            document.getElementById('m-status-text').innerText = '⚠️ 안전모드 작동';
+            document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-red-500 mt-1 animate-pulse';
+
+            addLog(`[AI Safety] 🚨 과열 감지! 히터 강제 차단, 후드 완전개방. 안전모드 진입.`, 'text-red-400 font-bold');
+        }
+
+        function resumeFromEmergency() {
+            document.getElementById('emergency-overlay').classList.add('hidden');
+            document.getElementById('emergency-overlay').classList.remove('flex');
+
+            deviceState.cookStatus = deviceState.preEmergencyStatus || 'cooking';
+            document.getElementById('m-status-text').innerText = deviceState.cookStatus === 'resting' ? '레스팅 중 (잔열)' : '가열 중';
+            document.getElementById('m-status-text').className = deviceState.cookStatus === 'resting'
+                ? 'text-[12px] font-bold text-purple-500 mt-1'
+                : 'text-[12px] font-bold text-[#0381FE] mt-1';
+
+            addLog(`[System] 안전 확인 완료. 조리를 재개합니다.`, 'text-emerald-400 font-bold');
+            simTick = setInterval(engineTick, 100);
+        }
 
         initUI();
     </script>
