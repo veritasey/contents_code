@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.1.3 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.1.4 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -43,7 +43,7 @@
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.3</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.4</h1>
             <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -235,7 +235,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.1.3 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.1.4 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -321,7 +321,7 @@
                     <!-- Card 1: Category & Cut -->
                     <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
                         <h3 class="text-[13px] font-bold text-gray-800 mb-3">재료 및 종류</h3>
-                        <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-1.5 pb-1" id="m-cat-container">
+                        <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-1.5 pb-1 cursor-grab active:cursor-grabbing" id="m-cat-container">
                             <!-- JS Generated -->
                         </div>
                         <!-- 가로 스크롤 위치 표시 바: 전체 대비 현재 보이는 영역의 비중을 막대로 표기하고, 스크롤에 맞춰 함께 움직입니다 -->
@@ -891,6 +891,37 @@
             mCatContainer.addEventListener('scroll', updateCatScrollIndicator);
             window.addEventListener('resize', updateCatScrollIndicator);
             updateCatScrollIndicator();
+            enableMouseDragScroll(mCatContainer);
+        }
+
+        // 터치 스와이프가 아닌 데스크톱 마우스로도 가로 스크롤이 되도록:
+        // 1) 세로 휠 입력을 가로 스크롤로 변환하고, 2) 클릭 드래그로 스크롤할 수 있게 합니다.
+        function enableMouseDragScroll(el) {
+            let isDown = false, startX = 0, startScrollLeft = 0, moved = false;
+
+            el.addEventListener('mousedown', (e) => {
+                isDown = true;
+                moved = false;
+                startX = e.pageX;
+                startScrollLeft = el.scrollLeft;
+            });
+            window.addEventListener('mousemove', (e) => {
+                if(!isDown) return;
+                const dx = e.pageX - startX;
+                if(Math.abs(dx) > 4) moved = true;
+                if(moved) el.scrollLeft = startScrollLeft - dx;
+            });
+            window.addEventListener('mouseup', () => { isDown = false; });
+            // 드래그로 스크롤한 직후에는 칩이 실수로 클릭(선택)되지 않도록 캡처 단계에서 막습니다.
+            el.addEventListener('click', (e) => {
+                if(moved) { e.stopPropagation(); e.preventDefault(); }
+            }, true);
+
+            el.addEventListener('wheel', (e) => {
+                if(el.scrollWidth <= el.clientWidth) return;
+                e.preventDefault();
+                el.scrollLeft += e.deltaY;
+            }, { passive: false });
         }
 
         function updateCatScrollIndicator() {
