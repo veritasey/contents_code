@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.1.1 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.1.2 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -26,26 +26,24 @@
         /* SmartThings One UI Specific Styles */
         .one-ui-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        /* 네이티브 드롭다운(옵션 목록)이 시스템 기본 폰트를 쓰지 않도록 강제 통일 */
+        select, option { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        /* 화면 크기에 관계없이 전체 UI가 항상 다 보이도록 고정 크기 프레임을 스케일링 */
-        html, body { margin: 0; }
-        #app-frame {
-            width: 1600px;
-            height: 900px;
-            position: fixed;
-            top: 50%;
-            left: 50%;
+        /* 모바일 목업(휴대폰) 전용 — 실제 폰 화면처럼 세로 공간에 맞춰 통째로 축소/확대.
+           조리 시작 버튼과 하단 탭은 폰 프레임의 자식(absolute)이라 스케일과 함께 항상 따라와
+           보이며, 다 못 담는 카드 영역만 자체 스크롤로 처리됩니다. */
+        #phone-shell {
+            width: 360px;
+            height: 780px;
             transform-origin: center center;
         }
     </style>
 </head>
-<body class="bg-slate-950 h-screen w-screen overflow-hidden">
-
-    <div id="app-frame" class="bg-slate-900 text-slate-200 flex flex-col">
+<body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.1</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.2</h1>
             <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -54,10 +52,10 @@
         </div>
     </header>
 
-    <main class="flex-1 grid grid-cols-3 gap-3 p-3 overflow-hidden">
+    <main class="flex-1 min-h-0 grid grid-cols-3 gap-3 p-3 overflow-hidden" style="grid-template-rows: minmax(0, 1fr);">
         
         <!-- COLUMN 1: Device LCD UI -->
-        <section class="panel rounded-xl flex flex-col overflow-hidden relative">
+        <section class="panel rounded-xl flex flex-col overflow-hidden relative min-h-0">
             <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
                 <div id="overlay-title" class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
                 <div id="overlay-desc" class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
@@ -137,7 +135,7 @@
         </section>
 
         <!-- COLUMN 2: Central Systems -->
-        <section class="flex flex-col gap-2 overflow-hidden">
+        <section class="flex flex-col gap-2 overflow-hidden min-h-0">
             <!-- 1. Sensor Hub -->
             <div class="panel rounded-xl p-3 border-l-4 border-sky-500 shadow-md">
                 <div class="flex justify-between items-center mb-2">
@@ -237,15 +235,16 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.1.1 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.1.2 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
 
         <!-- COLUMN 3: SmartThings One UI App View -->
-        <section class="flex justify-center items-center h-full relative bg-slate-800/30 rounded-xl border border-slate-800/50">
-            <!-- Mobile Phone Shell -->
-            <div class="w-full max-w-[360px] h-[96%] max-h-[800px] bg-[#F4F4F4] border-[8px] border-slate-800 rounded-[2.5rem] relative shadow-2xl flex flex-col overflow-hidden font-sans">
+        <section id="phone-column" class="flex justify-center items-center h-full min-h-0 relative bg-slate-800/30 rounded-xl border border-slate-800/50 overflow-hidden">
+            <!-- Mobile Phone Shell: 실제 폰처럼 항상 360x780 비율을 유지하면서, 세로 공간이 부족하면
+                 통째로 축소됩니다 (fitPhoneToColumn) — 액션바/하단탭은 이 프레임의 자식이라 함께 따라옵니다. -->
+            <div id="phone-shell" class="bg-[#F4F4F4] border-[8px] border-slate-800 rounded-[2.5rem] relative shadow-2xl flex flex-col overflow-hidden font-sans">
                 
                 <!-- 갤럭시 스타일 펀치홀 카메라 -->
                 <div class="absolute top-2.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black rounded-full ring-1 ring-slate-700/60 z-20"></div>
@@ -456,9 +455,6 @@
             </div>
         </section>
     </main>
-
-    </div>
-    <!-- /#app-frame -->
 
     <script>
         let deviceState = { power: true, cookStatus: 'idle', currentPhase: 0 };
@@ -1378,14 +1374,14 @@
             airDesc.innerText = deviceState.cookStatus === 'completed' ? '조리 후 미세먼지 감지' : '일반 실내 대기 수준';
             renderServiceDeviceButtons();
 
-            // 카드 2: Samsung Food — 추천 시즈닝 (기기제어에서 선택한 카테고리와 연동)
+            // 카드 2: Samsung Food — 추천 시즈닝 (기기제어에서 선택한 카테고리와 연동, 라벨은 선택한 부위로 표기)
             const seasoningEmpty = document.getElementById('svc-seasoning-empty');
             const seasoningContent = document.getElementById('svc-seasoning-content');
-            if(state.category && seasoningConfig[state.category]) {
+            if(state.category && state.cut && seasoningConfig[state.category]) {
                 const cfg = seasoningConfig[state.category];
                 seasoningEmpty.classList.add('hidden');
                 seasoningContent.classList.remove('hidden');
-                document.getElementById('svc-seasoning-group').innerText = cfg.group;
+                document.getElementById('svc-seasoning-group').innerText = `${state.cut} 추천 시즈닝`;
                 document.getElementById('svc-seasoning-tags').innerHTML = cfg.tags.map(t =>
                     `<span class="text-[10px] font-bold text-gray-700 bg-[#F4F4F4] px-2.5 py-1.5 rounded-full">${t}</span>`
                 ).join('');
@@ -1470,14 +1466,23 @@
             addLog(`[Service] ${name} 앱으로 이동합니다. (데모 환경에서는 실제 화면 전환 없이 기록만 남깁니다)`, 'text-sky-300');
         }
 
-        // 화면 크기가 어떻든 1600x900 기준으로 설계된 UI 전체가 항상 보이도록 축소/확대합니다.
-        function fitAppToViewport() {
-            const frame = document.getElementById('app-frame');
-            const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
-            frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        // 나머지 화면(기기 패널·코어 시스템)은 기존처럼 동적(반응형) 레이아웃을 그대로 씁니다.
+        // 모바일 목업만 세로 공간이 부족할 때 실제 폰처럼 비율을 유지한 채 통째로 줄어들도록 처리합니다.
+        // (조리 시작 버튼·하단 탭은 phone-shell의 absolute 자식이라 스케일과 함께 항상 표시되고,
+        //  카드가 많아 그래도 안 들어가면 중간 스크롤 영역이 자체적으로 스크롤됩니다.)
+        function fitPhoneToColumn() {
+            const column = document.getElementById('phone-column');
+            const phone = document.getElementById('phone-shell');
+            const PAD = 16;
+            const scale = Math.min(
+                (column.clientWidth - PAD) / 360,
+                (column.clientHeight - PAD) / 780,
+                1 // 원래 크기보다 더 키우지는 않음
+            );
+            phone.style.transform = `scale(${scale})`;
         }
-        window.addEventListener('resize', fitAppToViewport);
-        fitAppToViewport();
+        window.addEventListener('resize', fitPhoneToColumn);
+        fitPhoneToColumn();
 
         randomizeServiceDeviceState();
         initUI();
