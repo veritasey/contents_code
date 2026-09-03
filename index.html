@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.1.0 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.1.1 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -26,13 +26,26 @@
         /* SmartThings One UI Specific Styles */
         .one-ui-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+
+        /* 화면 크기에 관계없이 전체 UI가 항상 다 보이도록 고정 크기 프레임을 스케일링 */
+        html, body { margin: 0; }
+        #app-frame {
+            width: 1600px;
+            height: 900px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
+<body class="bg-slate-950 h-screen w-screen overflow-hidden">
+
+    <div id="app-frame" class="bg-slate-900 text-slate-200 flex flex-col">
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.0</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.1</h1>
             <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -224,7 +237,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.1.0 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.1.1 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -234,7 +247,8 @@
             <!-- Mobile Phone Shell -->
             <div class="w-full max-w-[360px] h-[96%] max-h-[800px] bg-[#F4F4F4] border-[8px] border-slate-800 rounded-[2.5rem] relative shadow-2xl flex flex-col overflow-hidden font-sans">
                 
-                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                <!-- 갤럭시 스타일 펀치홀 카메라 -->
+                <div class="absolute top-2.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black rounded-full ring-1 ring-slate-700/60 z-20"></div>
                 <div class="flex justify-between items-center px-5 pt-2 pb-1 text-[11px] font-bold text-gray-800 bg-[#F4F4F4] z-10">
                     <span>9:41</span>
                     <div class="flex gap-1.5"><span>📶</span><span>🔋</span></div>
@@ -345,18 +359,22 @@
                         <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">SmartThings</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">실내 공기 환경</h3>
-                            <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3 mb-3">
+                            <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3 mb-1.5">
                                 <div>
                                     <span id="svc-air-status-badge" class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1"></span>
                                     <div class="text-[11px] text-gray-500" id="svc-air-desc"></div>
                                 </div>
-                                <div class="text-2xl font-bold text-gray-900" id="svc-air-value">--</div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-gray-900 leading-none"><span id="svc-air-value">--</span><span class="text-[11px] font-bold text-gray-400 ml-0.5">㎍/㎥</span></div>
+                                </div>
                             </div>
+                            <div class="text-[10px] text-gray-400 mb-3" id="svc-air-standard">기준: 미세먼지(PM2.5) 15㎍/㎥ 이하 좋음</div>
                             <div class="flex gap-2">
                                 <button id="svc-btn-hood" onclick="toggleServiceDevice('hood')" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[10px] font-bold py-2.5 rounded-xl border border-transparent transition-colors">🌀 후드</button>
                                 <button id="svc-btn-air" onclick="toggleServiceDevice('air')" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[10px] font-bold py-2.5 rounded-xl border border-transparent transition-colors">💨 공기청정기</button>
                                 <button id="svc-btn-ac" onclick="toggleServiceDevice('ac')" class="flex-1 bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[10px] font-bold py-2.5 rounded-xl border border-transparent transition-colors">❄️ 에어컨</button>
                             </div>
+                            <div id="svc-air-action-msg" class="hidden text-[10px] font-bold text-[#0381FE] mt-2.5"></div>
                         </div>
 
                         <!-- Service Card 2: Samsung Food — 추천 시즈닝 믹스 -->
@@ -375,11 +393,19 @@
                         <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">Samsung Health</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">식사 후 웰니스 브리핑</h3>
-                            <div id="svc-health-empty" class="text-[11px] text-gray-400">조리를 완료하면 웰니스 브리핑을 확인할 수 있어요.</div>
+
+                            <!-- 조리 전: 오늘의 목표 칼로리 -->
+                            <div id="svc-health-pre" class="bg-[#F4F4F4] rounded-xl p-3 text-center">
+                                <div class="text-[9px] text-gray-500 mb-0.5">오늘 권장 섭취 칼로리</div>
+                                <div class="text-[17px] font-bold text-gray-900" id="svc-health-target-kcal">2,000 kcal</div>
+                                <div class="text-[10px] text-gray-400 mt-1">아직 식사 전이에요</div>
+                            </div>
+
+                            <!-- 조리 완료 후: 이번 요리 칼로리 + 소화 시간 -->
                             <div id="svc-health-content" class="hidden">
                                 <div class="flex gap-2 mb-2.5">
                                     <div class="flex-1 bg-[#F4F4F4] rounded-xl p-2.5 text-center">
-                                        <div class="text-[9px] text-gray-500 mb-0.5">예상 칼로리</div>
+                                        <div class="text-[9px] text-gray-500 mb-0.5">이번 요리 칼로리</div>
                                         <div class="text-[13px] font-bold text-gray-900" id="svc-health-kcal">--</div>
                                     </div>
                                     <div class="flex-1 bg-[#F4F4F4] rounded-xl p-2.5 text-center">
@@ -388,7 +414,7 @@
                                     </div>
                                 </div>
                                 <div id="svc-health-nightbadge" class="hidden text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1.5 rounded-xl mb-3">🌙 야식 주의 — 취침 3시간 전 완료를 권장해요</div>
-                                <button onclick="openExternalService('Samsung Health')" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">Samsung Health에서 리포트 보기</button>
+                                <button onclick="openExternalService('Samsung Health')" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors mt-3">Samsung Health에서 리포트 보기</button>
                             </div>
                         </div>
 
@@ -396,17 +422,9 @@
                         <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">Samsung Food</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">냉장고 재고 · 유통기한</h3>
-                            <div id="svc-pantry-empty" class="text-[11px] text-gray-400">재료를 선택하면 관련 재고를 보여드려요.</div>
-                            <div id="svc-pantry-content" class="hidden">
-                                <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3 mb-3">
-                                    <div>
-                                        <div class="text-[12px] font-bold text-gray-900" id="svc-pantry-item"></div>
-                                        <div class="text-[10px] text-gray-500" id="svc-pantry-expiry"></div>
-                                    </div>
-                                    <div class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap">⏱ 급속소비 레시피</div>
-                                </div>
-                                <button onclick="openExternalService('Samsung Food')" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">Samsung Food에서 재고 확인</button>
-                            </div>
+                            <div id="svc-pantry-caption" class="text-[10px] text-gray-400 mb-2"></div>
+                            <div id="svc-pantry-list" class="flex flex-col gap-2 mb-3"></div>
+                            <button onclick="openExternalService('Samsung Food')" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">Samsung Food에서 재고 확인</button>
                         </div>
 
                     </div>
@@ -438,6 +456,9 @@
             </div>
         </section>
     </main>
+
+    </div>
+    <!-- /#app-frame -->
 
     <script>
         let deviceState = { power: true, cookStatus: 'idle', currentPhase: 0 };
@@ -481,6 +502,11 @@
             veges: { item: '아스파라거스 150g', expiry: '유통기한 D-2' },
             grains: { item: '백미 1kg', expiry: '유통기한 D-30' }
         };
+        // 조리 전 초기 화면 — 냉장고 재고 중 유통기한이 임박한, 지금 조리 가능한 재료
+        const pantryExpiringDefault = [
+            { item: '삼겹살 400g', expiry: '유통기한 D-1' },
+            { item: '흰살생선 250g', expiry: '유통기한 D-1' }
+        ];
         const healthConfig = {
             beef: { kcal: '540 kcal', digest: '2시간 30분' },
             pork: { kcal: '580 kcal', digest: '2시간 40분' },
@@ -489,7 +515,20 @@
             veges: { kcal: '180 kcal', digest: '1시간 10분' },
             grains: { kcal: '260 kcal', digest: '1시간 50분' }
         };
-        const AIR_QUALITY_BASELINE = 24; // 일반 실내 대기 지수 (임의 기준값)
+        const DAILY_TARGET_KCAL = '2,000 kcal'; // 오늘 권장 섭취 칼로리 (임의 참고값)
+        const AIR_QUALITY_BASELINE = 14; // 미세먼지(PM2.5) 일반 실내 기준값, ㎍/㎥
+        const AIR_QUALITY_STANDARD = 15; // "좋음" 판정 기준선, ㎍/㎥
+
+        // [서비스 탭] 후드/공기청정기/에어컨의 현재 on/off 상태.
+        // 실제 기기가 없으므로 앱을 열 때 한 번만 무작위로 정하고, 이후엔 버튼으로만 바뀝니다.
+        let serviceDeviceState = { hood: false, air: false, ac: false };
+        function randomizeServiceDeviceState() {
+            serviceDeviceState = {
+                hood: Math.random() < 0.7, // 후드는 조리 직후라 70% 확률로 켜져 있음
+                air: Math.random() < 0.5,
+                ac: Math.random() < 0.5
+            };
+        }
 
         const config = {
             categories: [
@@ -1008,11 +1047,10 @@
             document.getElementById('m-feedback-card').classList.remove('flex');
             document.getElementById('btn-emergency-test').disabled = true;
             switchMobileTab('device');
-            ['hood', 'air', 'ac'].forEach(kind => {
-                const btn = document.getElementById('svc-btn-' + kind);
-                btn.classList.remove('svc-active', 'bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
-                btn.classList.add('bg-[#F4F4F4]', 'text-gray-700', 'border-transparent');
-            });
+            document.getElementById('svc-air-action-msg').classList.add('hidden');
+            // 후드/공기청정기/에어컨은 실제 가전을 나타내므로, 조리 세션을 초기화해도
+            // 켜짐/꺼짐 상태 자체는 그대로 유지합니다 (표시만 다시 그림).
+            renderServiceDeviceButtons();
 
             document.getElementById('total-progress').style.width = '0%';
             document.getElementById('val-time').innerText = '00:00';
@@ -1202,7 +1240,7 @@
                 switchMobileTab('device'); // 서비스 탭을 보고 있었더라도 피드백 카드를 놓치지 않도록 복귀
                 document.getElementById('m-status-text').innerText = '조리 완료!';
                 document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-[#0381FE] mt-1 animate-pulse';
-                document.getElementById('m-btn-stop').innerText = '확인 (초기화)';
+                document.getElementById('m-btn-stop').innerText = '조리 완료';
                 document.getElementById('m-btn-stop').className = 'w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors';
                 document.getElementById('btn-emergency-test').disabled = true;
             }
@@ -1328,23 +1366,19 @@
         // 서비스 탭을 열 때마다 현재 state/deviceState를 기준으로 다시 그립니다.
         // 별도 인터벌 없이 "탭 진입 시점"에만 계산하므로 백그라운드에서 도는 루프가 생기지 않습니다.
         function updateServiceCards() {
-            // 카드 1: SmartThings — 실내 공기 환경 (조리 전/후 상태)
+            // 카드 1: SmartThings — 실내 공기 환경 (조리 전/후 미세먼지 수치)
             const airBadge = document.getElementById('svc-air-status-badge');
             const airDesc = document.getElementById('svc-air-desc');
             const airValue = document.getElementById('svc-air-value');
-            if(deviceState.cookStatus === 'completed') {
-                airValue.innerText = Math.round(AIR_QUALITY_BASELINE * 1.3);
-                airBadge.innerText = '주의';
-                airBadge.className = 'inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 bg-amber-100 text-amber-700';
-                airDesc.innerText = '조리 후 오염 감지 (기준 대비 +30%)';
-            } else {
-                airValue.innerText = AIR_QUALITY_BASELINE;
-                airBadge.innerText = '좋음';
-                airBadge.className = 'inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 bg-emerald-100 text-emerald-700';
-                airDesc.innerText = '일반 실내 대기 수준';
-            }
+            const pm = deviceState.cookStatus === 'completed' ? Math.round(AIR_QUALITY_BASELINE * 1.3) : AIR_QUALITY_BASELINE;
+            const isGood = pm <= AIR_QUALITY_STANDARD;
+            airValue.innerText = pm;
+            airBadge.innerText = isGood ? '좋음' : '보통';
+            airBadge.className = `inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`;
+            airDesc.innerText = deviceState.cookStatus === 'completed' ? '조리 후 미세먼지 감지' : '일반 실내 대기 수준';
+            renderServiceDeviceButtons();
 
-            // 카드 2: Samsung Food — 추천 시즈닝 (선택된 카테고리 기반)
+            // 카드 2: Samsung Food — 추천 시즈닝 (기기제어에서 선택한 카테고리와 연동)
             const seasoningEmpty = document.getElementById('svc-seasoning-empty');
             const seasoningContent = document.getElementById('svc-seasoning-content');
             if(state.category && seasoningConfig[state.category]) {
@@ -1360,12 +1394,12 @@
                 seasoningContent.classList.add('hidden');
             }
 
-            // 카드 3: Samsung Health — 조리 완료 후에만 브리핑 표시
-            const healthEmpty = document.getElementById('svc-health-empty');
+            // 카드 3: Samsung Health — 조리 전엔 오늘의 목표 칼로리, 완료 후엔 이번 요리 칼로리+소화시간
+            const healthPre = document.getElementById('svc-health-pre');
             const healthContent = document.getElementById('svc-health-content');
             if(deviceState.cookStatus === 'completed' && state.category && healthConfig[state.category]) {
                 const cfg = healthConfig[state.category];
-                healthEmpty.classList.add('hidden');
+                healthPre.classList.add('hidden');
                 healthContent.classList.remove('hidden');
                 document.getElementById('svc-health-kcal').innerText = cfg.kcal;
                 document.getElementById('svc-health-digest').innerText = cfg.digest;
@@ -1374,37 +1408,59 @@
                 if(hour >= 21 || hour < 4) nightBadge.classList.remove('hidden');
                 else nightBadge.classList.add('hidden');
             } else {
-                healthEmpty.classList.remove('hidden');
+                document.getElementById('svc-health-target-kcal').innerText = DAILY_TARGET_KCAL;
+                healthPre.classList.remove('hidden');
                 healthContent.classList.add('hidden');
             }
 
-            // 카드 4: Samsung Food — 냉장고 재고 (선택된 카테고리 기반)
-            const pantryEmpty = document.getElementById('svc-pantry-empty');
-            const pantryContent = document.getElementById('svc-pantry-content');
+            // 카드 4: Samsung Food — 냉장고 재고. 재료 선택 전엔 유통기한 임박 재료, 선택 후엔 해당 재료
+            const pantryCaption = document.getElementById('svc-pantry-caption');
+            const pantryList = document.getElementById('svc-pantry-list');
+            const renderPantryRow = (it) => `
+                <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3">
+                    <div>
+                        <div class="text-[12px] font-bold text-gray-900">${it.item}</div>
+                        <div class="text-[10px] text-gray-500">${it.expiry}</div>
+                    </div>
+                    <div class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full whitespace-nowrap">⏱ 급속소비 레시피</div>
+                </div>`;
             if(state.category && pantryConfig[state.category]) {
-                const cfg = pantryConfig[state.category];
-                pantryEmpty.classList.add('hidden');
-                pantryContent.classList.remove('hidden');
-                document.getElementById('svc-pantry-item').innerText = cfg.item;
-                document.getElementById('svc-pantry-expiry').innerText = cfg.expiry;
+                pantryCaption.innerText = '선택한 재료의 냉장고 재고예요.';
+                pantryList.innerHTML = renderPantryRow(pantryConfig[state.category]);
             } else {
-                pantryEmpty.classList.remove('hidden');
-                pantryContent.classList.add('hidden');
+                pantryCaption.innerText = '유통기한이 임박한, 지금 조리 가능한 재료예요.';
+                pantryList.innerHTML = pantryExpiringDefault.map(renderPantryRow).join('');
             }
+        }
+
+        // 후드/공기청정기/에어컨 버튼을 현재 on/off 상태에 맞춰 파란색으로 표시
+        function renderServiceDeviceButtons() {
+            ['hood', 'air', 'ac'].forEach(kind => {
+                const btn = document.getElementById('svc-btn-' + kind);
+                if(serviceDeviceState[kind]) {
+                    btn.classList.remove('bg-[#F4F4F4]', 'text-gray-700', 'border-transparent');
+                    btn.classList.add('bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
+                } else {
+                    btn.classList.remove('bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
+                    btn.classList.add('bg-[#F4F4F4]', 'text-gray-700', 'border-transparent');
+                }
+            });
         }
 
         // SmartThings 카드의 후드/공기청정기/에어컨 버튼 — 시각적 토글만 수행 (인터벌 없음)
         function toggleServiceDevice(kind) {
             const labels = { hood: '후드', air: '공기청정기', ac: '에어컨' };
-            const btn = document.getElementById('svc-btn-' + kind);
-            const isActive = btn.classList.contains('svc-active');
-            if(isActive) {
-                btn.classList.remove('svc-active', 'bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
-                btn.classList.add('bg-[#F4F4F4]', 'text-gray-700', 'border-transparent');
+            const wasOn = serviceDeviceState[kind];
+            serviceDeviceState[kind] = !wasOn;
+            renderServiceDeviceButtons();
+
+            const msg = document.getElementById('svc-air-action-msg');
+            msg.classList.remove('hidden');
+            if(wasOn) {
+                msg.innerText = `${labels[kind]} 제품 동작이 종료합니다.`;
                 addLog(`[SmartThings] ${labels[kind]} 가동을 중지했습니다.`, 'text-sky-300');
             } else {
-                btn.classList.remove('bg-[#F4F4F4]', 'text-gray-700', 'border-transparent');
-                btn.classList.add('svc-active', 'bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
+                msg.innerText = `${labels[kind]} 제품이 동작합니다.`;
                 addLog(`[SmartThings] ${labels[kind]}를 가동했습니다.`, 'text-sky-300');
             }
         }
@@ -1414,6 +1470,16 @@
             addLog(`[Service] ${name} 앱으로 이동합니다. (데모 환경에서는 실제 화면 전환 없이 기록만 남깁니다)`, 'text-sky-300');
         }
 
+        // 화면 크기가 어떻든 1600x900 기준으로 설계된 UI 전체가 항상 보이도록 축소/확대합니다.
+        function fitAppToViewport() {
+            const frame = document.getElementById('app-frame');
+            const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+            frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+        window.addEventListener('resize', fitAppToViewport);
+        fitAppToViewport();
+
+        randomizeServiceDeviceState();
         initUI();
     </script>
 </body>
