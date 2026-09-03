@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.1.2 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.1.3 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -43,7 +43,7 @@
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.2</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.3</h1>
             <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -235,7 +235,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.1.2 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.1.3 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -321,8 +321,12 @@
                     <!-- Card 1: Category & Cut -->
                     <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
                         <h3 class="text-[13px] font-bold text-gray-800 mb-3">재료 및 종류</h3>
-                        <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-3 pb-1" id="m-cat-container">
+                        <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-1.5 pb-1" id="m-cat-container">
                             <!-- JS Generated -->
+                        </div>
+                        <!-- 가로 스크롤 위치 표시 바: 전체 대비 현재 보이는 영역의 비중을 막대로 표기하고, 스크롤에 맞춰 함께 움직입니다 -->
+                        <div class="relative w-full h-1 bg-[#F4F4F4] rounded-full mb-3 overflow-hidden">
+                            <div id="m-cat-scroll-thumb" class="absolute top-0 left-0 h-full bg-[#0381FE] rounded-full" style="width: 100%;"></div>
                         </div>
                         <div class="relative">
                             <select id="m-cut-select" class="w-full bg-[#F4F4F4] text-gray-800 text-[12px] font-bold rounded-xl p-3 pl-4 focus:outline-none focus:ring-2 focus:ring-[#0381FE]/50" onchange="mobileSelectCutChanged(this.value)">
@@ -778,7 +782,10 @@
         }
 
         function syncMobileUI() {
-            document.querySelectorAll('[id^="m-cat-"]').forEach(el => {
+            // id 접두사(m-cat-)만으로 찾으면 m-cat-container, m-cat-scroll-thumb 같은
+            // 카테고리 칩이 아닌 요소까지 걸려서 첫 반복에서 에러가 나고 전체 로직이 끊깁니다.
+            // 실제 칩에만 붙인 클래스로 찾습니다.
+            document.querySelectorAll('.m-cat-chip').forEach(el => {
                 el.classList.remove('bg-[#0381FE]', 'text-white', 'border-[#0381FE]');
                 el.classList.add('bg-[#F4F4F4]', 'text-gray-500', 'border-transparent');
                 el.querySelector('span:last-child').classList.remove('text-white');
@@ -871,13 +878,38 @@
 
                 const mBtn = document.createElement('div');
                 mBtn.id = `m-cat-${c.id}`;
-                mBtn.className = 'flex flex-col items-center justify-center min-w-[65px] p-2 rounded-[14px] bg-[#F4F4F4] border border-transparent cursor-pointer transition-colors shrink-0';
+                mBtn.className = 'm-cat-chip flex flex-col items-center justify-center min-w-[65px] p-2 rounded-[14px] bg-[#F4F4F4] border border-transparent cursor-pointer transition-colors shrink-0';
                 mBtn.innerHTML = `<span class="text-xl mb-1 leading-none">${c.icon}</span><span class="text-[10px] font-extrabold text-gray-500 mt-1">${c.label}</span>`;
                 mBtn.onclick = () => { document.getElementById(`cat-btn-${c.id}`).click(); };
                 mCatContainer.appendChild(mBtn);
             });
             syncMobileUI();
-            updateInitTempLabel(22); 
+            updateInitTempLabel(22);
+
+            // 재료 메뉴가 6개라 한 화면에 다 안 보여서 가로 스크롤이 필요합니다.
+            // 스크롤이 더 있다는 걸 알 수 있도록 하단에 위치 표시 바를 두고, 스크롤에 맞춰 함께 움직입니다.
+            mCatContainer.addEventListener('scroll', updateCatScrollIndicator);
+            window.addEventListener('resize', updateCatScrollIndicator);
+            updateCatScrollIndicator();
+        }
+
+        function updateCatScrollIndicator() {
+            const container = document.getElementById('m-cat-container');
+            const thumb = document.getElementById('m-cat-scroll-thumb');
+            if(!container || !thumb) return;
+            const scrollWidth = container.scrollWidth;
+            const clientWidth = container.clientWidth;
+            if(scrollWidth <= clientWidth + 1) {
+                thumb.style.width = '100%';
+                thumb.style.left = '0%';
+                return;
+            }
+            const thumbWidthPercent = Math.max(15, (clientWidth / scrollWidth) * 100);
+            const maxScrollLeft = scrollWidth - clientWidth;
+            const scrollRatio = maxScrollLeft > 0 ? container.scrollLeft / maxScrollLeft : 0;
+            const maxThumbLeftPercent = 100 - thumbWidthPercent;
+            thumb.style.width = thumbWidthPercent + '%';
+            thumb.style.left = (scrollRatio * maxThumbLeftPercent) + '%';
         }
 
         function selectCategory(catId, btnEl, hoodAction) {
