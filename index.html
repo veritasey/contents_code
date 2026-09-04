@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.1.4 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.2.0 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -43,7 +43,7 @@
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.1.4</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.2.0</h1>
             <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -52,10 +52,18 @@
         </div>
     </header>
 
-    <main class="flex-1 min-h-0 grid grid-cols-3 gap-3 p-3 overflow-hidden" style="grid-template-rows: minmax(0, 1fr);">
-        
+    <!-- View switch menu: 4개 화면(기존 구성/기기 메뉴/코어 엔진/모바일 UX)을 전환합니다. -->
+    <nav class="bg-slate-950 border-b border-slate-800 px-3 py-2 flex gap-2 flex-none overflow-x-auto scrollbar-hide">
+        <button type="button" data-mode="all" onclick="switchViewMode('all')" class="view-menu-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors bg-sky-500 text-white">🔲 기존 구성 (전체 보기)</button>
+        <button type="button" data-mode="device" onclick="switchViewMode('device')" class="view-menu-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors text-slate-400 hover:text-slate-200">🖥️ 기기 메뉴</button>
+        <button type="button" data-mode="engine" onclick="switchViewMode('engine')" class="view-menu-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors text-slate-400 hover:text-slate-200">⚙️ 코어 엔진</button>
+        <button type="button" data-mode="mobile" onclick="switchViewMode('mobile')" class="view-menu-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors text-slate-400 hover:text-slate-200">📱 모바일 UX</button>
+    </nav>
+
+    <main id="main-content" class="flex-1 min-h-0 grid grid-cols-3 gap-3 p-3 overflow-hidden" style="grid-template-rows: minmax(0, 1fr);">
+
         <!-- COLUMN 1: Device LCD UI -->
-        <section class="panel rounded-xl flex flex-col overflow-hidden relative min-h-0">
+        <section id="panel-device" class="panel rounded-xl flex flex-col overflow-hidden relative min-h-0">
             <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
                 <div id="overlay-title" class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
                 <div id="overlay-desc" class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
@@ -135,7 +143,7 @@
         </section>
 
         <!-- COLUMN 2: Central Systems -->
-        <section class="flex flex-col gap-2 overflow-hidden min-h-0">
+        <section id="panel-engine" class="flex flex-col gap-2 overflow-hidden min-h-0">
             <!-- 1. Sensor Hub -->
             <div class="panel rounded-xl p-3 border-l-4 border-sky-500 shadow-md">
                 <div class="flex justify-between items-center mb-2">
@@ -235,7 +243,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.1.4 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.2.0 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -1546,6 +1554,37 @@
         }
         window.addEventListener('resize', fitPhoneToColumn);
         fitPhoneToColumn();
+
+        // 4개 메뉴(기존 구성 / 기기 메뉴 / 코어 엔진 / 모바일 UX) 전환
+        // 화면을 나눠 보여줄 때는 나머지 패널을 hidden 처리하고 grid를 1열로 바꿔
+        // 선택한 패널이 전체 폭을 쓰도록 합니다. DOM에서 제거하는 게 아니라 숨기기만
+        // 하므로 슬라이더 값, 로그, 조리 상태 등은 다른 메뉴로 이동해도 그대로 유지됩니다.
+        let currentViewMode = 'all';
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+            const main = document.getElementById('main-content');
+            const panels = {
+                device: document.getElementById('panel-device'),
+                engine: document.getElementById('panel-engine'),
+                mobile: document.getElementById('phone-column')
+            };
+            Object.keys(panels).forEach(key => {
+                const show = (mode === 'all') || (mode === key);
+                panels[key].classList.toggle('hidden', !show);
+            });
+            main.classList.toggle('grid-cols-3', mode === 'all');
+            main.classList.toggle('grid-cols-1', mode !== 'all');
+
+            document.querySelectorAll('.view-menu-btn').forEach(btn => {
+                const active = btn.dataset.mode === mode;
+                btn.classList.toggle('bg-sky-500', active);
+                btn.classList.toggle('text-white', active);
+                btn.classList.toggle('text-slate-400', !active);
+            });
+
+            // 레이아웃이 바뀐 뒤(폭이 달라진 뒤) 폰 스케일을 다시 계산
+            requestAnimationFrame(fitPhoneToColumn);
+        }
 
         randomizeServiceDeviceState();
         initUI();
