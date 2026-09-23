@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.3.0 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.4.0 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -55,8 +55,8 @@
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.3.0</h1>
-            <p class="text-xs text-slate-400">Accessory · Searing & Cooking Care</p>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.4.0</h1>
+            <p class="text-xs text-slate-400">Auto-First Mobile UX</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
             <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> API Connected</span>
@@ -76,21 +76,16 @@
 
         <!-- COLUMN 1: Device LCD UI -->
         <section id="panel-device" class="panel rounded-xl flex flex-col overflow-hidden relative min-h-0">
-            <div id="ui-overlay" class="absolute inset-0 bg-slate-900/70 z-20 hidden flex-col items-center justify-center backdrop-blur-sm">
-                <div id="overlay-title" class="text-sky-400 text-lg font-bold mb-2 animate-pulse">🔥 조리 진행 중...</div>
-                <div id="overlay-desc" class="text-slate-300 text-xs text-center px-4">디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.</div>
-                <button onclick="resetSimulation()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded">중지 및 초기화</button>
+            <div class="bg-slate-800 p-2.5 border-b border-slate-700 font-bold text-sm text-purple-400 flex items-center justify-between">
+                <span class="flex items-center gap-2">🖥️ Device UI (LCD Panel)</span>
+                <span id="device-status-badge" class="hidden text-[10px] px-2 py-1 rounded font-mono"></span>
             </div>
 
-            <div class="bg-slate-800 p-2.5 border-b border-slate-700 font-bold text-sm text-purple-400 flex items-center gap-2">
-                🖥️ Device UI (LCD Panel)
-            </div>
-            
             <div class="p-3 flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-4" id="ui-container">
                 <div class="bg-slate-800 p-3 rounded-lg border border-slate-600 shadow-inner flex flex-col gap-3">
-                    
+
                     <!-- Thickness Slider -->
-                    <div>
+                    <div id="thickness-block">
                         <div class="flex justify-between items-center mb-1.5">
                             <h2 class="text-[11px] font-bold text-amber-400">⚙️ [Test] 두께 수동 설정 (Manual)</h2>
                             <span id="slider-val" class="text-[11px] font-mono font-bold text-sky-400 bg-slate-900 px-2 py-1 rounded">Auto</span>
@@ -102,7 +97,7 @@
                     </div>
 
                     <!-- Initial Temp Slider -->
-                    <div class="border-t border-slate-700 pt-2">
+                    <div class="border-t border-slate-700 pt-2" id="inittemp-block">
                         <div class="flex justify-between items-center mb-1.5">
                             <h2 class="text-[11px] font-bold text-emerald-400">🌡️ [Test] 초기 심부 온도 설정</h2>
                             <span id="slider-temp-val" class="text-[11px] font-mono font-bold text-emerald-300 bg-slate-900 px-2 py-1 rounded">22 ℃</span>
@@ -112,7 +107,7 @@
                             <span>-20℃ (냉동)</span><span>8℃ (냉장)</span><span>22℃ (실온)</span>
                         </div>
                     </div>
-                    
+
                     <!-- Time Scale -->
                     <div class="border-t border-slate-700 pt-2">
                         <div class="flex justify-between items-center mb-1.5">
@@ -148,7 +143,7 @@
                     </div>
                 </div>
 
-                <div>
+                <div id="step-category-wrap">
                     <h2 class="text-[11px] font-bold text-slate-400 mb-1.5">1. 식재료 카테고리 선택</h2>
                     <div class="grid grid-cols-2 gap-1.5" id="grid-category"></div>
                 </div>
@@ -183,14 +178,24 @@
                     </div>
                 </div>
 
-                <div id="step-action" class="hidden mt-auto pt-2">
+                <div id="step-action" class="mt-auto pt-2">
                     <div class="text-center text-[10px] font-mono font-bold text-sky-400 mb-1.5 bg-slate-800 p-1.5 rounded" id="eta-preview">예상 소요 시간 계산 중...</div>
                     <div id="accessory-summary" class="hidden text-center text-[9px] text-orange-300 font-mono bg-slate-900 border border-orange-900 px-2 py-1 rounded mb-1.5"></div>
                     <div id="personalize-badge" class="hidden text-center text-[9px] text-sky-300 font-mono bg-slate-900 border border-sky-900 px-2 py-1 rounded mb-1.5"></div>
                     <div id="sear-personalize-badge" class="hidden text-center text-[9px] text-orange-300 font-mono bg-slate-900 border border-orange-900 px-2 py-1 rounded mb-1.5"></div>
-                    <button onclick="startSimulation()" id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors">
-                        🔥 조리 시작 (Start Cooking)
-                    </button>
+                    <div id="device-action-wrap">
+                        <button id="btn-start" disabled class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                            🔥 조리 시작 (Start Cooking)
+                        </button>
+                        <div id="btn-emergency-pair" class="hidden flex gap-2">
+                            <button onclick="resumeFromEmergency()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-[11px]">
+                                ✅ 안전 확인 후 재개
+                            </button>
+                            <button onclick="resetSimulation()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-lg text-[11px]">
+                                ⏹ 조리 중지
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -300,7 +305,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.3.0 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.4.0 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -328,6 +333,15 @@
                     <div id="golden-time-countdown" class="text-[11px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full shrink-0">15</div>
                 </div>
 
+                <!-- [V8.4.0-E] 조리 완료 토스트 (골든타임 배너와 같은 One UI 푸시 스타일) -->
+                <div id="m-complete-toast" class="hidden absolute top-9 left-3 right-3 z-30 bg-white/95 backdrop-blur rounded-2xl shadow-2xl px-3.5 py-3 items-center gap-3 border border-black/5">
+                    <div class="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center text-base shrink-0">✨</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[10px] font-bold text-gray-500">그래핀 스마트 쿠커 · 방금</div>
+                        <div class="text-[12px] font-bold text-gray-900 leading-snug">조리가 완료되었어요</div>
+                    </div>
+                </div>
+
                 <!-- Emergency AI Alert (One UI system alert style) -->
                 <div id="m-emergency-overlay" class="hidden absolute inset-0 z-40 bg-black/50 backdrop-blur-sm items-center justify-center px-6">
                     <div class="bg-white rounded-[24px] p-5 w-full shadow-2xl flex flex-col items-center text-center">
@@ -339,6 +353,25 @@
                             <button onclick="resetSimulation()" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[13px] font-bold py-3 rounded-2xl transition-colors">⏹ 조리 중지</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- [V8.4.0-D] 바텀시트 컴포넌트: 폰 셸의 직계 자식. 하단 탭(z-10)보다 위, 안전모드 팝업(z-40)보다 아래 -->
+                <div id="m-sheet-dim"
+                     class="hidden absolute inset-0 z-30 bg-black/40 transition-opacity duration-200 opacity-0"
+                     onclick="closeSheet()"></div>
+
+                <div id="m-sheet"
+                     class="absolute left-0 right-0 bottom-0 z-30 bg-white rounded-t-[28px] shadow-2xl
+                            translate-y-full transition-transform duration-300 ease-out
+                            max-h-[78%] flex flex-col">
+                    <div class="pt-3 pb-1 flex justify-center shrink-0" id="m-sheet-handle">
+                        <div class="w-10 h-1 rounded-full bg-gray-300"></div>
+                    </div>
+                    <div class="px-5 pb-2 flex items-center justify-between shrink-0">
+                        <h3 class="text-[15px] font-extrabold text-gray-900" id="m-sheet-title">세부 조정</h3>
+                        <button onclick="closeSheet()" class="text-[12px] font-bold text-gray-400 px-2 py-1">닫기</button>
+                    </div>
+                    <div class="px-5 pb-6 overflow-y-auto scrollbar-hide flex-1" id="m-sheet-body"></div>
                 </div>
 
                 <!-- 1. Header -->
@@ -353,6 +386,9 @@
                     <!-- TAB VIEW: 기기제어 -->
                     <div id="m-devicecontrol-view" class="flex flex-col">
 
+                    <!-- [V8.4.0-C] 4단계 진행 표시 (조리 중에만 표시) -->
+                    <div class="hidden items-center justify-center gap-0 mb-3" id="m-phase-track"></div>
+
                     <!-- 2. Main Status (원형 게이지 사이즈 업) -->
                     <div class="bg-white rounded-[24px] p-4 mb-3 one-ui-shadow flex flex-col items-center justify-center">
                         <div class="relative w-[180px] h-[180px]">
@@ -366,10 +402,23 @@
                                     <span class="text-5xl font-bold tracking-tighter" id="m-temp">22.0</span>
                                     <span class="text-sm font-bold mt-1 text-gray-500 ml-1">°C</span>
                                 </div>
-                                <span class="text-[12px] font-bold text-gray-500 mt-2" id="m-time-remain">00:00</span>
-                                <span class="text-[10px] font-bold text-orange-500 mt-1" id="m-surface"></span>
+                                <span class="text-[11px] font-bold text-gray-400 mt-0.5" id="m-target-temp"></span>
+                                <span class="text-[12px] font-bold text-gray-500 mt-1" id="m-time-remain">00:00</span>
                             </div>
                         </div>
+                        <span class="hidden text-[11px] font-bold text-gray-400 mt-2" id="m-eta-clock"></span>
+                        <span class="hidden" id="m-surface"></span>
+                    </div>
+
+                    <!-- [V8.4.0-C] 현재 동작 + 상단 그릴 상태 (조리 중에만 표시) -->
+                    <div class="hidden bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" id="m-action-status">
+                        <div class="text-[13px] font-bold text-gray-900" id="m-action-title">가열 중</div>
+                        <div class="text-[11px] mt-1" id="m-action-sub"></div>
+                    </div>
+
+                    <!-- [V8.4.0-C] 자세히 바텀시트 진입 (조리 중에만 표시) -->
+                    <div class="hidden justify-end mb-3" id="m-detail-entry-row">
+                        <button onclick="openSheet('detail')" class="text-[11px] font-bold text-[#0381FE] px-1 py-1">자세히 ›</button>
                     </div>
 
                     <!-- 2.5 Personalize AI Feedback Card (조리 완료 후에만 표시) -->
@@ -385,7 +434,7 @@
 
                     <!-- 3. Control Cards -->
                     <!-- Card 1: Category & Cut -->
-                    <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                    <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" id="m-card-material">
                         <h3 class="text-[13px] font-bold text-gray-800 mb-3">재료 및 종류</h3>
                         <div class="flex gap-3 overflow-x-auto scrollbar-hide mb-1.5 pb-1 cursor-grab active:cursor-grabbing" id="m-cat-container">
                             <!-- JS Generated -->
@@ -404,18 +453,35 @@
                         </div>
                     </div>
 
-                    <!-- Card 2: Doneness -->
-                    <div class="bg-white rounded-[20px] p-4 shadow-sm mb-3 one-ui-shadow">
-                        <h3 class="text-[13px] font-bold text-gray-800 mb-3">목표 굽기</h3>
-                        <div class="relative">
-                            <select id="m-done-select" class="w-full bg-[#F4F4F4] text-gray-800 text-[12px] font-bold rounded-xl p-3 pl-4 focus:outline-none focus:ring-2 focus:ring-[#0381FE]/50 disabled:opacity-50" onchange="mobileSelectDoneChanged(this.value)">
-                                <option value="">굽기 선택</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    <!-- 목표 굽기 select는 화면에서 제거되었지만, LCD 패널·프리셋 불러오기와의 기존 연동
+                         경로(mobileSelectDoneChanged)를 그대로 쓰기 위해 숨김 상태로 남겨둡니다. -->
+                    <select id="m-done-select" class="hidden" onchange="mobileSelectDoneChanged(this.value)">
+                        <option value="">굽기 선택</option>
+                    </select>
+                    <div id="m-personalize-badge" class="hidden"></div>
+
+                    <!-- [V8.4.0-B] 조리 전 요약 카드: 굽기·액세서리 3장의 카드를 2줄 요약 + 바텀시트로 대체 -->
+                    <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" id="m-summary-card">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[13px] font-bold text-gray-900 leading-snug" id="m-summary-line1">
+                                    재료를 선택해 주세요
+                                </div>
+                                <div class="text-[11px] text-gray-500 mt-1 leading-snug" id="m-summary-line2"></div>
                             </div>
+                            <button onclick="openSheet('adjust')"
+                                    class="shrink-0 text-[11px] font-bold text-[#0381FE] bg-[#EAF3FF] px-3 py-2 rounded-xl active:bg-[#D6E8FF]">
+                                세부 조정 ›
+                            </button>
                         </div>
-                        <div id="m-personalize-badge" class="hidden text-[10px] text-[#0381FE] font-bold mt-2.5 bg-[#EAF3FF] px-2.5 py-1.5 rounded-xl text-center"></div>
+                        <div id="m-summary-badges" class="flex gap-1.5 flex-wrap mt-2.5"></div>
+                    </div>
+
+                    <!-- [V8.4.0-A/B] 액세서리 장착 확인 -->
+                    <div class="bg-white rounded-[20px] px-4 py-3 mb-3 one-ui-shadow flex items-center gap-3"
+                         id="m-acc-check-row" onclick="toggleAccessoryCheck()">
+                        <input type="checkbox" id="m-acc-check" class="w-5 h-5 accent-[#0381FE] pointer-events-none">
+                        <span class="text-[12px] font-bold text-gray-700">액세서리를 장착했어요</span>
                     </div>
 
                     </div>
@@ -538,8 +604,17 @@
                     <button id="m-btn-start" onclick="startSimulation()" class="w-full bg-[#0381FE] active:bg-[#0265C8] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors" disabled>
                         조리 시작
                     </button>
-                    <button id="m-btn-stop" onclick="resetSimulation()" class="w-full bg-[#E5E7EB] active:bg-[#D1D5DB] text-gray-700 font-bold text-[15px] py-3.5 rounded-[18px] shadow-sm transition-colors hidden">
-                        가열 중단 / 취소
+                    <!-- [V8.4.0-I] 일시정지는 이번 버전 범위 밖 — 자리만 잡아두고 disabled로 둡니다. -->
+                    <div id="m-btn-cooking-pair" class="hidden gap-2">
+                        <button id="m-btn-pause" disabled title="준비 중" class="flex-1 bg-[#E5E7EB] text-gray-400 font-bold text-[13px] py-3.5 rounded-[18px] cursor-not-allowed">
+                            ⏸ 일시정지
+                        </button>
+                        <button id="m-btn-stop" onclick="resetSimulation()" class="flex-1 bg-[#E5E7EB] active:bg-[#D1D5DB] text-gray-700 font-bold text-[13px] py-3.5 rounded-[18px] shadow-sm transition-colors">
+                            가열 중단
+                        </button>
+                    </div>
+                    <button id="m-btn-done" onclick="resetSimulation()" class="hidden w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors">
+                        조리 완료
                     </button>
                 </div>
 
@@ -578,12 +653,15 @@
             // 시어링 파라미터
             searCount: 0,        // 0~5
             searSec: 0,          // 20~90
-            searUserTouched: false
+            searUserTouched: false,
+            // [V8.4.0] 액세서리를 실제로 장착했는지 사용자가 확인했는지 여부
+            accessoryConfirmed: false
         };
 
         // 시어링 런타임 (V8.3.0)
         let phase3Segments = [];
         let currentSegKey = null;
+        let currentSegRef = null; // [V8.4.0-C] m-action-status가 참조하는 현재 세그먼트
         let surfaceTemp = 22.0;
 
         function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -1048,6 +1126,49 @@
             resolveSearParams();
             updateSearControlsUI();
             updateAccessorySummary();
+            refreshSummary();
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.4.0-A] 기본 경로 자동화 — 굽기 "마지막 선택 기억" + 액세서리 확인 체크
+        // ------------------------------------------------------------------
+        function getLastDoneKey(cat, cut) {
+            return `minmax_lastdone_${cat}_${cut}`.replace(/\s+/g, '_');
+        }
+        function getLastDoneness(cat, cut) {
+            try { return localStorage.getItem(getLastDoneKey(cat, cut)) || null; }
+            catch (e) { return null; }
+        }
+        function saveLastDoneness() {
+            if (!state.category || !state.cut || !state.doneness) return;
+            try { localStorage.setItem(getLastDoneKey(state.category, state.cut), state.doneness); }
+            catch (e) {}
+        }
+
+        // 액세서리를 잘못 넣으면 조리가 통째로 실패하는데, 기기 화면이 최소화되면 확인할
+        // 방법이 없으므로 시작 전 한 번의 체크를 둡니다. 다만 직전 조리와 액세서리 구성이
+        // 같으면 3탭 원칙을 지키기 위해 자동으로 체크된 상태로 둡니다.
+        const ACC_LAST_KEY = 'minmax_last_accessory';
+
+        function accessorySignature() {
+            return `${state.bottomVessel}|${state.bottomGrill}|${state.topAccessory}`;
+        }
+
+        function refreshAccessoryCheck() {
+            let last = null;
+            try { last = localStorage.getItem(ACC_LAST_KEY); } catch (e) {}
+            const same = (last === accessorySignature());
+            state.accessoryConfirmed = same;          // 같은 구성이면 자동 확인
+            const check = document.getElementById('m-acc-check');
+            if (check) check.checked = same;
+            updateStartEnabled();
+        }
+
+        function toggleAccessoryCheck() {
+            state.accessoryConfirmed = !state.accessoryConfirmed;
+            const check = document.getElementById('m-acc-check');
+            if (check) check.checked = state.accessoryConfirmed;
+            updateStartEnabled();
         }
 
         // ------------------------------------------------------------------
@@ -1126,6 +1247,7 @@
             resolveSearParams();
             updateSearControlsUI();
             updateAccessorySummary();
+            refreshAccessoryCheck();
         }
 
         function updateSearControlsUI() {
@@ -1180,6 +1302,184 @@
 
             el.innerText = `🍳 ${bottomStr} / 상단 ${topStr} · ${searStr}`;
             el.classList.remove('hidden');
+        }
+
+        // [V8.4.0-B] 세부 조정 바텀시트의 "기본값으로 되돌리기" — 만지다 꼬였을 때 돌아올 길.
+        function resetToDefaults() {
+            applyAccessoryDefaults(state.category);
+            state.searUserTouched = false;
+            resolveSearParams();
+            syncAccessoryUI();
+            refreshSummary();
+            refreshSheetIfOpen();
+            addLog('[UI] 설정을 기본값으로 되돌렸습니다.', 'text-slate-400');
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.4.0-B] 조리 전 요약 카드 — 목표 굽기/액세서리/시어링 설정 카드 3장을
+        // 2줄 요약 + "세부 조정" 바텀시트로 대체합니다.
+        // ------------------------------------------------------------------
+        function summaryBottomStr() {
+            const parts = [];
+            if(state.bottomVessel === 'glass') parts.push('유리 용기');
+            if(state.bottomGrill && state.bottomGrill !== 'none') parts.push(`${grillLabels[state.bottomGrill]} 그릴`);
+            return parts.length ? parts.join(' + ') : '없음';
+        }
+
+        function refreshSummary() {
+            const line1 = document.getElementById('m-summary-line1');
+            const line2 = document.getElementById('m-summary-line2');
+            const badges = document.getElementById('m-summary-badges');
+            if(!line1) return;
+
+            if(!state.category || !state.cut) {
+                line1.innerText = '재료를 선택해 주세요';
+                line2.innerText = '';
+                if(badges) badges.innerHTML = '';
+                return;
+            }
+
+            let line1Txt = state.doneness || '굽기 선택 중...';
+            if(isSearingAvailable() && state.searCount > 0) {
+                line1Txt += ` · ${state.searMode === 'post' ? '후시어' : '선시어'} ${state.searCount}회`;
+            }
+            line1.innerText = line1Txt;
+            line2.innerText = `${summaryBottomStr()} / 상단 ${state.topAccessory === 'copper' ? '구리' : '없음'}`;
+
+            if(badges) {
+                const chips = [];
+                if(state.doneness) {
+                    const tCount = getPersonalFeedbackCount(state.category, state.cut, state.doneness);
+                    if(tCount > 0) {
+                        const off = getPersonalOffset(state.category, state.cut, state.doneness);
+                        chips.push(`<span class="text-[9px] font-bold text-sky-600 bg-[#EAF3FF] px-2 py-1 rounded-full">🎯 ${off >= 0 ? '+' : ''}${off.toFixed(1)}°C</span>`);
+                    }
+                    if(isSearingAvailable()) {
+                        const d = getSearDelta(state.category, state.cut, state.doneness);
+                        if(d.countDelta || d.searSecDelta) {
+                            chips.push(`<span class="text-[9px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">🔥 ${fmtDelta(d.countDelta || 0)}회 ${fmtDelta(d.searSecDelta || 0)}초</span>`);
+                        }
+                    }
+                }
+                badges.innerHTML = chips.join('');
+            }
+        }
+
+        function sheetOptionBtn(label, active, selected, onclickAttr, widthClass) {
+            widthClass = widthClass || 'flex-1';
+            if(!active) {
+                return `<button disabled class="${widthClass} bg-[#F4F4F4] text-gray-300 text-[10px] font-bold py-2 rounded-xl line-through cursor-not-allowed">${label}</button>`;
+            }
+            const cls = selected
+                ? `${widthClass} bg-[#0381FE] text-white text-[10px] font-bold py-2 rounded-xl transition-colors`
+                : `${widthClass} bg-[#F4F4F4] text-gray-700 text-[10px] font-bold py-2 rounded-xl transition-colors active:bg-gray-200`;
+            return `<button onclick="${onclickAttr}" class="${cls}">${label}</button>`;
+        }
+
+        function buildAdjustSheet() {
+            if(!state.category) return `<p class="text-[12px] text-gray-400 py-6 text-center">재료를 먼저 선택해 주세요.</p>`;
+
+            const doneOptions = getDonenessOptions(state.category, state.cut);
+            const doneRow = doneOptions.map(d =>
+                sheetOptionBtn(d.label, d.active, d.active && state.doneness === d.label, `mobileSetDoneness('${d.label}')`, 'w-full')
+            ).join('');
+
+            const vesselRow = ['none', 'glass'].map(v =>
+                sheetOptionBtn(vesselLabels[v], true, state.bottomVessel === v, `mobileSetVessel('${v}')`)
+            ).join('');
+
+            const grillNone = state.bottomGrill === 'none' || !state.bottomGrill;
+            const grillRow = ['none', 'stainless', 'copper', 'stainless+copper'].map(g =>
+                sheetOptionBtn(grillLabels[g], true, state.bottomGrill === g, `mobileSetGrill('${g}')`)
+            ).join('');
+
+            const topRow = [
+                sheetOptionBtn(topLabels.none, true, state.topAccessory === 'none', `mobileSetTop('none')`),
+                sheetOptionBtn(grillNone ? '구리 그릴 (그릴 필요)' : '구리 그릴', !grillNone, state.topAccessory === 'copper', `mobileSetTop('copper')`)
+            ].join('');
+
+            let searBlock = '';
+            if(isSearingAvailable()) {
+                const modeRow = ['pre', 'post'].map(m =>
+                    sheetOptionBtn(m === 'pre' ? '선시어' : '후시어', true, state.searMode === m, `mobileSetSearMode('${m}')`)
+                ).join('');
+                searBlock = `
+                    <div class="border-t border-gray-100 pt-3 mt-3">
+                        <p class="text-[10px] text-gray-400 mb-1.5">시어링 방식</p>
+                        <div class="flex gap-1.5 mb-3">${modeRow}</div>
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-[10px] text-gray-400">시어링 횟수</p>
+                            <div class="flex items-center gap-3">
+                                <button onclick="mobileAdjustSearCount(-1)" class="w-7 h-7 rounded-full bg-[#F4F4F4] text-gray-700 font-bold">−</button>
+                                <span class="text-[13px] font-bold text-gray-900 w-10 text-center">${state.searCount}회</span>
+                                <button onclick="mobileAdjustSearCount(1)" class="w-7 h-7 rounded-full bg-[#F4F4F4] text-gray-700 font-bold">+</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] text-gray-400">1회 시간</p>
+                            <div class="flex items-center gap-3">
+                                <button onclick="mobileAdjustSearSec(-5)" class="w-7 h-7 rounded-full bg-[#F4F4F4] text-gray-700 font-bold">−</button>
+                                <span class="text-[13px] font-bold text-gray-900 w-10 text-center">${state.searSec}초</span>
+                                <button onclick="mobileAdjustSearSec(5)" class="w-7 h-7 rounded-full bg-[#F4F4F4] text-gray-700 font-bold">+</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            return `
+                <div>
+                    <p class="text-[10px] text-gray-400 mb-1.5">굽기</p>
+                    <div class="grid grid-cols-3 gap-1.5 mb-1">${doneRow}</div>
+                </div>
+                <div class="border-t border-gray-100 pt-3 mt-3">
+                    <p class="text-[10px] text-gray-400 mb-1.5">하단 용기</p>
+                    <div class="flex gap-1.5 mb-3">${vesselRow}</div>
+                    <p class="text-[10px] text-gray-400 mb-1.5">하단 그릴</p>
+                    <div class="flex gap-1.5 mb-3">${grillRow}</div>
+                    <p class="text-[10px] text-gray-400 mb-1.5">상단</p>
+                    <div class="flex gap-1.5">${topRow}</div>
+                </div>
+                ${searBlock}
+                <button onclick="resetToDefaults()" class="w-full mt-5 bg-[#F4F4F4] active:bg-gray-200 text-gray-500 text-[11px] font-bold py-2.5 rounded-xl transition-colors">기본값으로 되돌리기</button>
+            `;
+        }
+
+        // 시트가 "세부 조정"으로 열려 있을 때만, 여닫는 애니메이션 없이 내용만 다시 그립니다.
+        function refreshSheetIfOpen() {
+            if(currentSheet !== 'adjust') return;
+            document.getElementById('m-sheet-body').innerHTML = buildAdjustSheet();
+        }
+
+        function mobileSetDoneness(label) {
+            state.doneness = label;
+            syncMobileUI();
+            updateETA();
+            refreshSummary();
+            refreshSheetIfOpen();
+        }
+        function mobileSetVessel(v) {
+            state.bottomVessel = v; state.searUserTouched = false;
+            syncAccessoryUI(); updateETA(); refreshSummary(); refreshSheetIfOpen();
+        }
+        function mobileSetGrill(v) {
+            state.bottomGrill = v; state.searUserTouched = false;
+            syncAccessoryUI(); updateETA(); refreshSummary(); refreshSheetIfOpen();
+        }
+        function mobileSetTop(v) {
+            state.topAccessory = v; state.searUserTouched = false;
+            syncAccessoryUI(); updateETA(); refreshSummary(); refreshSheetIfOpen();
+        }
+        function mobileSetSearMode(m) {
+            state.searMode = m;
+            syncAccessoryUI(); updateETA(); refreshSummary(); refreshSheetIfOpen();
+        }
+        function mobileAdjustSearCount(delta) {
+            setSearParams(state.searCount + delta, state.searSec, 'mobile');
+            refreshSummary(); refreshSheetIfOpen();
+        }
+        function mobileAdjustSearSec(delta) {
+            setSearParams(state.searCount, state.searSec + delta, 'mobile');
+            refreshSummary(); refreshSheetIfOpen();
         }
 
         function updateThicknessLabel(val) {
@@ -1268,11 +1568,7 @@
             }
 
             // 하단 조리 시작 버튼 동기화
-            if (state.category && state.cut && state.doneness) {
-                document.getElementById('m-btn-start').disabled = false;
-            } else {
-                document.getElementById('m-btn-start').disabled = true;
-            }
+            updateStartEnabled();
         }
 
         function mobileSelectCutChanged(val) {
@@ -1322,6 +1618,9 @@
             // [V8.3.0] 쿠킹 케어 카드 순서 복원 + 드래그앤드롭 초기화
             applyCareOrder();
             initCareReorder();
+
+            // [V8.4.0] 바텀시트 핸들 드래그로 닫기 초기화
+            initSheetDragClose();
         }
 
         // 터치 스와이프가 아닌 데스크톱 마우스로도 가로 스크롤이 되도록:
@@ -1423,16 +1722,22 @@
             document.getElementById('step-doneness').classList.remove('hidden');
             setTimeout(() => document.getElementById('step-doneness').classList.remove('opacity-0'), 50);
 
-            // [핵심 로직] UX 자동화: 부위 선택 시 기본 굽기 자동 선택 처리
+            // [V8.4.0-A] UX 자동화: 부위 선택 시 기본 굽기 자동 선택 처리.
+            // 우선순위: 1) 직전에 이 재료·부위로 조리할 때 고른 굽기  2) 미디엄 레어  3) 첫 번째 선택 가능한 옵션
             const validOptions = doneOptions.filter(d => d.active && d.label !== '-');
             let targetDone = null;
-            
+
             if (validOptions.length === 1) {
-                targetDone = validOptions[0].label; 
+                targetDone = validOptions[0].label;
             } else {
-                const medRare = validOptions.find(d => d.label === '미디엄 레어');
-                if (medRare) targetDone = '미디엄 레어'; 
-                else if (validOptions.length > 0) targetDone = validOptions[0].label; 
+                const lastDone = getLastDoneness(state.category, state.cut);
+                const lastValid = lastDone && validOptions.find(d => d.label === lastDone);
+                if (lastValid) targetDone = lastDone;
+                else {
+                    const medRare = validOptions.find(d => d.label === '미디엄 레어');
+                    if (medRare) targetDone = '미디엄 레어';
+                    else if (validOptions.length > 0) targetDone = validOptions[0].label;
+                }
             }
 
             if (targetDone) {
@@ -1460,9 +1765,14 @@
 
         function startSimulation() {
             if(!state.category || !state.cut || !state.doneness) return;
+            if(!state.accessoryConfirmed) { shakeAccessoryCheck(); return; }
 
-            document.getElementById('ui-overlay').classList.remove('hidden');
-            document.getElementById('ui-overlay').classList.add('flex');
+            // [V8.4.0] 브라우저 자동재생 정책 때문에, 사용자 상호작용(시작 버튼 클릭) 시점에
+            // AudioContext를 미리 만들어 resume해두면 완료 알림음이 대부분 재생됩니다.
+            primeAudioContext();
+
+            setDevicePanelInteractive(false);
+            closeSheet();
 
             const sliderVal = parseInt(document.getElementById('test-thickness').value);
             const finalThickness = sliderVal === 0 ? Math.floor(Math.random() * 15) + 20 : sliderVal;
@@ -1498,9 +1808,6 @@
             document.getElementById('golden-time-banner').classList.add('hidden');
             document.getElementById('golden-time-banner').classList.remove('flex');
 
-            document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
-            document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
-            document.getElementById('overlay-desc').innerHTML = '디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.';
             document.getElementById('m-feedback-card').classList.add('hidden');
             document.getElementById('m-feedback-card').classList.remove('flex');
             document.getElementById('m-feedback-done-msg').classList.add('hidden');
@@ -1513,8 +1820,9 @@
 
             document.getElementById('m-btn-start').disabled = true;
             document.getElementById('m-btn-start').classList.add('hidden');
-            document.getElementById('m-btn-stop').classList.remove('hidden');
-            document.getElementById('m-btn-stop').innerText = '가열 중단 / 취소';
+            document.getElementById('m-btn-done').classList.add('hidden');
+            document.getElementById('m-btn-cooking-pair').classList.remove('hidden');
+            document.getElementById('m-btn-cooking-pair').classList.add('flex');
             document.getElementById('m-status-text').innerText = '가열 중';
 
             addLog(`[Logic] 부위특성: ${profile.desc}`, 'text-amber-400 font-bold');
@@ -1545,6 +1853,10 @@
             document.getElementById('temp-alert').classList.add('hidden');
             document.getElementById('val-temp').classList.remove('text-amber-400', 'text-red-400');
 
+            document.getElementById('m-target-temp').innerText = '';
+            refreshMobileScreenMode();
+            refreshDeviceUI();
+
             if(simTick) clearInterval(simTick);
             simTick = setInterval(engineTick, 100);
         }
@@ -1554,8 +1866,7 @@
             if(goldenTimeInterval) clearInterval(goldenTimeInterval);
             deviceState.cookStatus = 'idle';
 
-            document.getElementById('ui-overlay').classList.add('hidden');
-            document.getElementById('ui-overlay').classList.remove('flex');
+            setDevicePanelInteractive(true);
             document.getElementById('m-emergency-overlay').classList.add('hidden');
             document.getElementById('m-emergency-overlay').classList.remove('flex');
             document.getElementById('golden-time-banner').classList.add('hidden');
@@ -1586,12 +1897,10 @@
             setTopGrillHeight(TOP_HEIGHT.far, '완전 개방', 'bg-slate-800 border-slate-600 text-slate-300');
             
             document.getElementById('m-btn-start').classList.remove('hidden');
-            document.getElementById('m-btn-stop').classList.add('hidden');
-            
-            // 굽기 설정이 유효하면 시작 버튼 활성화
-            if (state.category && state.cut && state.doneness) {
-                document.getElementById('m-btn-start').disabled = false;
-            }
+            document.getElementById('m-btn-cooking-pair').classList.add('hidden');
+            document.getElementById('m-btn-cooking-pair').classList.remove('flex');
+            document.getElementById('m-btn-done').classList.add('hidden');
+            updateStartEnabled();
 
             document.getElementById('m-status-text').innerText = '대기 중';
             document.getElementById('m-status-text').className = 'text-[12px] font-bold text-[#0381FE] mt-1';
@@ -1605,7 +1914,12 @@
                 document.getElementById('mcu-' + id).style.boxShadow = 'none';
             });
 
-            updateETA(); 
+            document.getElementById('m-target-temp').innerText = '';
+            document.getElementById('m-eta-clock').innerText = '';
+            refreshMobileScreenMode();
+
+            updateETA();
+            refreshDeviceUI();
             addLog(`[System] Simulation Cancelled/Reset.`, 'text-amber-400');
         }
 
@@ -1644,6 +1958,12 @@
             document.getElementById('m-time-remain').innerText = `${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
             document.getElementById('m-ring').style.strokeDashoffset = 263.89 - (263.89 * (progressPercent / 100));
 
+            // [V8.4.0-C] 완성 시각은 가상 시간이 아니라 실제 시계 기준입니다.
+            // 배속이 바뀌면 남은 시간(실제 초)도 즉시 달라지므로 매 틱 다시 계산합니다.
+            const eta = new Date(Date.now() + (thermalMetrics.remainingTimeSec * 1000) / timeScale);
+            const etaClockEl = document.getElementById('m-eta-clock');
+            if (etaClockEl) etaClockEl.innerText = `${String(eta.getHours()).padStart(2, '0')}:${String(eta.getMinutes()).padStart(2, '0')} 완료 예정`;
+
             const startTemp = parseFloat(document.getElementById('test-init-temp').value);
             let currentTemp = startTemp;
 
@@ -1671,9 +1991,11 @@
                 if (segKey !== currentSegKey) {
                     seg.surfStart = surfaceTemp;
                     currentSegKey = segKey;
+                    currentSegRef = seg;
                     applySegmentActuators(seg);
                     logSegment(seg);
                     updateSearCounterUI(seg);
+                    updateActionStatus();
                 }
 
                 const p = seg.dur > 0 ? (local - seg.startOffset) / seg.dur : 1;
@@ -1702,6 +2024,7 @@
             surfaceEl.innerText = surfaceTemp.toFixed(0);
             surfaceEl.classList.toggle('text-orange-400', deviceState.currentPhase === 3 && currentSegKey && currentSegKey.startsWith('sear'));
             document.getElementById('m-surface').innerText = `겉면 ${surfaceTemp.toFixed(0)}°C`;
+            updateDetailSheetIfOpen();
 
             let ringColor = '#0381FE';
             if (currentTemp > 45) ringColor = '#F59E0B';
@@ -1717,11 +2040,14 @@
 
         function triggerPhase(phaseNum) {
             deviceState.currentPhase = phaseNum;
+            updatePhaseTrackUI(phaseNum);
 
             if(phaseNum === 1) {
                 setMCUState('mcu-idle', 'bg-blue-600 border-blue-400 text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.8)]');
                 setPWM(0, 0);
                 setTopGrillHeight(TOP_HEIGHT.contact, '측정 · 하강', 'bg-slate-800 border-blue-500 text-blue-300');
+                document.getElementById('m-target-temp').innerText = '';
+                updateActionStatus();
                 addLog(`[MCU] Phase 1: Interlock Check & Thickness Measurement OK.`);
             }
             if(phaseNum === 2) {
@@ -1735,6 +2061,8 @@
                 setTopGrillHeight(TOP_HEIGHT.contact, '밀폐', 'bg-slate-800 border-amber-500 text-amber-300');
 
                 const sT = parseFloat(document.getElementById('test-init-temp').value);
+                document.getElementById('m-target-temp').innerText = `목표 ${Math.max(sT, 8.0).toFixed(1)}°`;
+                updateActionStatus();
                 if(sT < 8.0) addLog(`[MCU] Phase 2: 초기온도(${sT}℃) 보정을 위한 Active IR 템페링 가동.`);
                 else addLog(`[MCU] Phase 2: 최적 온도 도달. 상태 안정화 수행.`);
             }
@@ -1742,6 +2070,7 @@
                 setMCUState('mcu-cook', 'bg-red-600 border-red-400 text-white font-bold shadow-[0_0_10px_rgba(220,38,38,0.8)]');
                 document.getElementById('mcu-temper').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
                 // 실제 PWM/그릴 높이는 engineTick이 phase3Segments(rise/sear/gap)에 따라 갱신합니다.
+                document.getElementById('m-target-temp').innerText = `목표 ${thermalMetrics.targetTempPull.toFixed(1)}°`;
                 addLog(`[MCU] Phase 3: Main Heating Started.`);
             }
             if(phaseNum === 4) {
@@ -1760,6 +2089,9 @@
 
                 document.getElementById('m-status-text').innerText = '레스팅 중 (잔열)';
                 document.getElementById('m-status-text').className = 'text-[12px] font-bold text-purple-500 mt-1';
+                document.getElementById('m-target-temp').innerText = `목표 ${thermalMetrics.targetTempFinal.toFixed(1)}°`;
+                refreshDeviceUI();
+                updateActionStatus();
 
                 addLog(`[Physics] 가열 중단 온도 도달! (${state.hoodFinishAction} 동작)`, 'text-red-400 font-bold');
             }
@@ -1771,14 +2103,14 @@
 
                 setTopGrillHeight(TOP_HEIGHT.far, '완전 개방', 'bg-slate-800 border-emerald-500 text-emerald-300');
 
-                document.getElementById('overlay-title').innerText = '✨ 조리 완료!';
                 document.getElementById('m-feedback-card').classList.remove('hidden');
                 document.getElementById('m-feedback-card').classList.add('flex');
                 switchMobileTab('device'); // 서비스 탭을 보고 있었더라도 피드백 카드를 놓치지 않도록 복귀
                 document.getElementById('m-status-text').innerText = '조리 완료!';
                 document.getElementById('m-status-text').className = 'text-[12px] font-extrabold text-[#0381FE] mt-1 animate-pulse';
-                document.getElementById('m-btn-stop').innerText = '조리 완료';
-                document.getElementById('m-btn-stop').className = 'w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors';
+                document.getElementById('m-btn-cooking-pair').classList.add('hidden');
+                document.getElementById('m-btn-cooking-pair').classList.remove('flex');
+                document.getElementById('m-btn-done').classList.remove('hidden');
                 document.getElementById('btn-emergency-test').disabled = true;
 
                 // [V8.3.0] 사용자가 시어링 값을 직접 조절했을 때만, 추천값 대비 델타로 취향을 저장합니다.
@@ -1795,7 +2127,164 @@
                     addLog(`[Personalize AI] 시어링 취향 저장: 횟수 ${fmtDelta(delta.countDelta)}회, 시간 ${fmtDelta(delta.searSecDelta)}초`, 'text-sky-300 font-bold');
                     updateSearPersonalizeBadge();
                 }
+
+                // [V8.4.0] 조리를 완주했을 때만 "마지막 굽기"와 "마지막 액세서리 구성"을 기억합니다.
+                saveLastDoneness();
+                try { localStorage.setItem(ACC_LAST_KEY, accessorySignature()); } catch (e) {}
+
+                setDevicePanelInteractive(true);
+                refreshDeviceUI();
+                notifyCookComplete();
+
+                refreshMobileScreenMode();
+                document.getElementById('m-target-temp').innerText = '';
             }
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.4.0-C] 조리 중 화면 — 4단계 진행 표시 + 현재 동작 카드
+        // ------------------------------------------------------------------
+        const PHASE_TRACK_STEPS = [
+            { phase: 1, label: '측정' },
+            { phase: 2, label: '템퍼링' },
+            { phase: 3, label: '조리' },
+            { phase: 4, label: '레스팅' }
+        ];
+
+        function updatePhaseTrackUI(phaseNum) {
+            const track = document.getElementById('m-phase-track');
+            if (!track) return;
+            track.innerHTML = PHASE_TRACK_STEPS.map((step, i) => {
+                let dotCls, labelCls;
+                if (phaseNum > step.phase || phaseNum >= 5) {
+                    dotCls = 'w-2 h-2 rounded-full bg-[#0381FE]';
+                    labelCls = 'text-[9px] text-gray-400';
+                } else if (phaseNum === step.phase) {
+                    dotCls = 'w-2 h-2 rounded-full bg-[#0381FE] ring-4 ring-[#0381FE]/20';
+                    labelCls = 'text-[9px] text-[#0381FE] font-bold';
+                } else {
+                    dotCls = 'w-2 h-2 rounded-full bg-gray-300';
+                    labelCls = 'text-[9px] text-gray-300';
+                }
+                const dot = `<div class="flex flex-col items-center gap-1"><div class="${dotCls}"></div><span class="${labelCls}">${step.label}</span></div>`;
+                const connector = i < PHASE_TRACK_STEPS.length - 1
+                    ? `<div class="w-6 h-px ${phaseNum > step.phase ? 'bg-[#0381FE]' : 'bg-gray-200'} mb-3.5"></div>` : '';
+                return dot + connector;
+            }).join('');
+        }
+
+        // 조리 전/중 화면 전환: 조리 중에는 재료 선택 카드·요약 카드·액세서리 체크는 숨기고
+        // (조작할 수 없는 항목이라 화면만 차지), 4단계 진행·현재 동작·자세히 진입을 보여줍니다.
+        function refreshMobileScreenMode() {
+            const idle = deviceState.cookStatus === 'idle';
+            const showInCook = deviceState.cookStatus === 'cooking' || deviceState.cookStatus === 'resting' || deviceState.cookStatus === 'emergency';
+
+            const materialCard = document.getElementById('m-card-material');
+            const summaryCard = document.getElementById('m-summary-card');
+            const accRow = document.getElementById('m-acc-check-row');
+            if (materialCard) materialCard.classList.toggle('hidden', !idle);
+            if (summaryCard) summaryCard.classList.toggle('hidden', !idle);
+            if (accRow) accRow.classList.toggle('hidden', !idle);
+
+            const phaseTrack = document.getElementById('m-phase-track');
+            const actionStatus = document.getElementById('m-action-status');
+            const detailRow = document.getElementById('m-detail-entry-row');
+            const etaClock = document.getElementById('m-eta-clock');
+            if (phaseTrack) { phaseTrack.classList.toggle('hidden', !showInCook); phaseTrack.classList.toggle('flex', showInCook); }
+            if (actionStatus) actionStatus.classList.toggle('hidden', !showInCook);
+            if (detailRow) { detailRow.classList.toggle('hidden', !showInCook); detailRow.classList.toggle('flex', showInCook); }
+            if (etaClock) etaClock.classList.toggle('hidden', !showInCook);
+
+            if (idle) {
+                const track = document.getElementById('m-phase-track');
+                if (track) track.innerHTML = '';
+            }
+        }
+
+        function updateActionStatus() {
+            const title = document.getElementById('m-action-title');
+            const sub = document.getElementById('m-action-sub');
+            if (!title || !sub) return;
+
+            if (deviceState.cookStatus === 'emergency') {
+                title.innerText = '⚠️ 안전모드';
+                sub.className = 'text-[11px] mt-1 font-bold text-red-600';
+                sub.innerText = '히터 차단 · 상단 완전 개방';
+                return;
+            }
+
+            const phase = deviceState.currentPhase;
+            if (phase === 2) {
+                title.innerText = '템퍼링 중';
+                sub.className = 'text-[11px] mt-1 text-gray-500';
+                sub.innerText = '차가운 재료를 데우고 있어요';
+            } else if (phase === 3) {
+                const kind = currentSegRef ? currentSegRef.kind : 'rise';
+                if (kind === 'sear') {
+                    title.innerText = `🔥 시어링 ${currentSegRef.index}/${currentSegRef.total} 진행 중`;
+                    sub.className = 'text-[11px] mt-1 font-bold text-red-600';
+                    sub.innerText = '상단 그릴 하강 · 접촉 중';
+                } else if (kind === 'gap') {
+                    title.innerText = '시어링 간격';
+                    sub.className = 'text-[11px] mt-1 font-bold text-amber-600';
+                    sub.innerText = `상단 ${TOP_HEIGHT.near}mm 근접`;
+                } else {
+                    title.innerText = '가열 중';
+                    sub.className = 'text-[11px] mt-1 text-gray-500';
+                    sub.innerText = `상단 그릴 이격 (${TOP_HEIGHT.mid}mm)`;
+                }
+            } else if (phase === 4) {
+                title.innerText = '레스팅 중 (잔열)';
+                sub.className = 'text-[11px] mt-1 font-bold text-purple-600';
+                sub.innerText = '발열을 멈추고 잔열로 마무리해요';
+            } else {
+                title.innerText = '측정 중';
+                sub.className = 'text-[11px] mt-1 text-gray-500';
+                sub.innerText = '두께를 측정하고 있어요';
+            }
+        }
+
+        // [V8.4.0-C] "자세히" 바텀시트 — 시트가 열려 있을 때만 engineTick이 값을 실시간 갱신합니다.
+        function buildDetailSheet() {
+            const topLabel = document.getElementById('hood-status') ? document.getElementById('hood-status').innerText.replace(/\s+/g, ' ') : '--';
+            return `
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3">
+                        <span class="text-[11px] text-gray-500">겉면 온도</span>
+                        <span class="text-[13px] font-bold text-gray-900" id="m-detail-surface">${surfaceTemp.toFixed(0)}°C</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3">
+                        <span class="text-[11px] text-gray-500">목표까지</span>
+                        <span class="text-[13px] font-bold text-gray-900" id="m-detail-remaining">--</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3">
+                        <span class="text-[11px] text-gray-500">상단 그릴 높이</span>
+                        <span class="text-[13px] font-bold text-gray-900" id="m-detail-grill">${topLabel}</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3">
+                        <span class="text-[11px] text-gray-500">히터 출력</span>
+                        <span class="text-[13px] font-bold text-gray-900" id="m-detail-pwm">--</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // engineTick에서 매 틱 호출 — 시트가 "자세히"로 열려 있을 때만 실제로 DOM을 갱신합니다.
+        function updateDetailSheetIfOpen() {
+            if (currentSheet !== 'detail') return;
+            const surfaceEl = document.getElementById('m-detail-surface');
+            const remainEl = document.getElementById('m-detail-remaining');
+            const grillEl = document.getElementById('m-detail-grill');
+            const pwmEl = document.getElementById('m-detail-pwm');
+            if (surfaceEl) surfaceEl.innerText = `${surfaceTemp.toFixed(0)}°C`;
+            if (remainEl) {
+                let target = thermalMetrics.targetTempPull;
+                if (deviceState.currentPhase === 4) target = thermalMetrics.targetTempFinal;
+                else if (deviceState.currentPhase === 2) target = Math.max(parseFloat(document.getElementById('test-init-temp').value), 8.0);
+                remainEl.innerText = `${Math.abs(target - thermalMetrics.currentMaterialTemp).toFixed(1)}°C 남음`;
+            }
+            if (grillEl) grillEl.innerText = document.getElementById('hood-status').innerText.replace(/\s+/g, ' ');
+            if (pwmEl) pwmEl.innerText = `상단 ${document.getElementById('pwm-top-txt').innerText} / 하단 ${document.getElementById('pwm-bottom-txt').innerText}`;
         }
 
         function setMCUState(id, classString) { document.getElementById(id).className = `p-1.5 rounded border transition-all duration-300 flex justify-between items-center ${classString}`; }
@@ -1884,6 +2373,58 @@
             }, 1000);
         }
 
+        // ------------------------------------------------------------------
+        // [V8.4.0-E] 조리 완료 알림 — 화면을 보지 않는 시간이 대부분이므로 소리·진동이
+        // 화면 정보보다 중요할 수 있습니다. 실패해도 나머지 알림은 동작하도록 각각 try/catch.
+        // ------------------------------------------------------------------
+        let sharedAudioContext = null;
+
+        // 브라우저 자동재생 정책 때문에 사용자 상호작용 없이는 소리가 안 날 수 있습니다.
+        // 조리 시작 버튼을 누르는 시점(사용자 상호작용)에 미리 만들어 resume해 둡니다.
+        function primeAudioContext() {
+            try {
+                if (!sharedAudioContext) {
+                    sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (sharedAudioContext.state === 'suspended') sharedAudioContext.resume();
+            } catch (e) { /* 무시 */ }
+        }
+
+        function showCompleteToast() {
+            const toast = document.getElementById('m-complete-toast');
+            if (!toast) return;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 2000);
+        }
+
+        function notifyCookComplete() {
+            // 진동 (지원 기기에서만)
+            try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]); } catch (e) {}
+
+            // 알림음 — Web Audio로 짧은 2음 차임
+            try {
+                const ctx = sharedAudioContext || new (window.AudioContext || window.webkitAudioContext)();
+                [[880, 0], [1320, 0.18]].forEach(([freq, delay]) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + delay + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.35);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + delay);
+                    osc.stop(ctx.currentTime + delay + 0.4);
+                });
+            } catch (e) { /* 자동재생 차단 환경에서는 무시 */ }
+
+            showCompleteToast();
+            addLog('[System] 조리 완료 알림 (진동 · 알림음)', 'text-sky-300');
+        }
+
         // [돌발상황 AI 대처] 실제 센서가 없는 데모 환경이라, 테스트 버튼으로 과열 상황을 인위적으로 발생시킵니다.
         function triggerEmergency() {
             if(deviceState.cookStatus === 'emergency') return; // 이미 안전모드 작동 중
@@ -1903,15 +2444,13 @@
             setPWM(0, 0);
             setTopGrillHeight(TOP_HEIGHT.far, '안전모드 · 완전개방', 'bg-red-950 border-red-500 text-red-300');
 
-            // 왼쪽 기기 패널: 짧은 상태 문구만 표시
-            document.getElementById('overlay-title').innerText = '⚠️ 안전모드 작동';
-            document.getElementById('overlay-title').className = 'text-red-400 text-lg font-bold mb-2 animate-pulse';
-            document.getElementById('overlay-desc').innerHTML = '히터 출력 차단 · 후드 완전개방<br>우측 모바일 앱에서 확인하세요.';
-
             // 오른쪽 모바일 앱: 안내 팝업 + 재개/중지 버튼
             document.getElementById('m-emergency-overlay').classList.remove('hidden');
             document.getElementById('m-emergency-overlay').classList.add('flex');
             document.getElementById('btn-emergency-test').disabled = true;
+            refreshDeviceUI();
+            refreshMobileScreenMode();
+            updateActionStatus();
 
             addLog(`[AI Safety] 🚨 과열 감지! 히터 강제 차단, 후드 완전개방. 안전모드 진입.`, 'text-red-400 font-bold');
         }
@@ -1920,10 +2459,6 @@
             document.getElementById('m-emergency-overlay').classList.add('hidden');
             document.getElementById('m-emergency-overlay').classList.remove('flex');
             document.getElementById('btn-emergency-test').disabled = false;
-
-            document.getElementById('overlay-title').innerText = '🔥 조리 진행 중...';
-            document.getElementById('overlay-title').className = 'text-sky-400 text-lg font-bold mb-2 animate-pulse';
-            document.getElementById('overlay-desc').innerHTML = '디바이스 패널 잠금 상태입니다.<br>우측 모바일 앱에서 확인하세요.';
 
             deviceState.cookStatus = deviceState.preEmergencyStatus || 'cooking';
             document.getElementById('m-status-text').innerText = deviceState.cookStatus === 'resting' ? '레스팅 중 (잔열)' : '가열 중';
@@ -1934,9 +2469,155 @@
             // 안전모드 중 PWM/그릴 높이를 0/완전개방으로 바꿔뒀으므로, Phase 3 재개 시
             // 현재 구간의 액추에이터 상태를 다시 적용하도록 세그먼트 변경으로 취급합니다.
             currentSegKey = null;
+            refreshDeviceUI();
+            refreshMobileScreenMode();
+            updateActionStatus();
 
             addLog(`[System] 안전 확인 완료. 조리를 재개합니다.`, 'text-emerald-400 font-bold');
             simTick = setInterval(engineTick, 100);
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.4.0-F] 기기 패널 잠금 오버레이 제거 — 조리 중에도 패널 내용이 계속
+        // 보이도록 하고, 대신 시작 버튼을 상태별 4가지로 바꾸고 선택 영역만 비활성화합니다.
+        // ------------------------------------------------------------------
+        function refreshDeviceActionButton() {
+            const btn = document.getElementById('btn-start');
+            const wrap = document.getElementById('device-action-wrap');
+            const s = deviceState.cookStatus;
+
+            document.getElementById('btn-emergency-pair').classList.toggle('hidden', s !== 'emergency');
+            btn.classList.toggle('hidden', s === 'emergency');
+            if (s === 'emergency') return;
+
+            const base = 'w-full text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+            if (s === 'idle') {
+                btn.className = `${base} bg-emerald-600 hover:bg-emerald-500`;
+                btn.innerText = '🔥 조리 시작 (Start Cooking)';
+                btn.onclick = startSimulation;
+                updateStartEnabled();
+            } else if (s === 'completed') {
+                btn.className = `${base} bg-sky-600 hover:bg-sky-500`;
+                btn.innerText = '✓ 확인 (초기화)';
+                btn.onclick = resetSimulation;
+                btn.disabled = false;
+            } else {
+                btn.className = `${base} bg-red-600 hover:bg-red-500`;
+                btn.innerText = '⏹ 중지 및 초기화';
+                btn.onclick = resetSimulation;
+                btn.disabled = false;
+            }
+        }
+
+        function refreshDeviceStatusBadge() {
+            const badge = document.getElementById('device-status-badge');
+            const map = {
+                cooking:   { text: '🔥 조리 중',   cls: 'bg-red-900 text-red-300' },
+                resting:   { text: '잔열 레스팅',   cls: 'bg-purple-900 text-purple-300' },
+                completed: { text: '✨ 완료',       cls: 'bg-sky-900 text-sky-300' },
+                emergency: { text: '⚠️ 안전모드',   cls: 'bg-red-950 text-red-300 animate-pulse' }
+            };
+            const cfg = map[deviceState.cookStatus];
+            if (!cfg) { badge.classList.add('hidden'); return; }
+            badge.classList.remove('hidden');
+            badge.className = `text-[10px] px-2 py-1 rounded font-mono ${cfg.cls}`;
+            badge.innerText = cfg.text;
+        }
+
+        function refreshDeviceUI() {
+            refreshDeviceActionButton();
+            refreshDeviceStatusBadge();
+        }
+
+        // 조리 중에는 화면은 그대로 보이되, 재료·부위·굽기·액세서리·두께·초기온도 선택만 막습니다.
+        // 배속 라디오는 조리 중에도 바꿀 수 있어야 하므로 제외합니다.
+        function setDevicePanelInteractive(enabled) {
+            ['step-category-wrap', 'step-cut', 'step-doneness', 'step-accessory',
+             'thickness-block', 'inittemp-block', 'sear-test-block'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.toggle('opacity-40', !enabled);
+                el.classList.toggle('pointer-events-none', !enabled);
+            });
+        }
+
+        // [V8.4.0-A] 재료·부위·굽기가 모두 선택되고, 액세서리 구성을 확인했을 때만 시작 가능
+        // 재료·부위·굽기까지만 완전해도 시작 버튼은 눌립니다. 액세서리 미확인은 하드 disable이
+        // 아니라 startSimulation() 안에서 흔들림 안내로 처리합니다 (미확인 상태에서도 눌러서
+        // 안내를 볼 수 있어야 하므로).
+        function updateStartEnabled() {
+            const ready = !!(state.category && state.cut && state.doneness);
+            const btnStart = document.getElementById('btn-start');
+            const mBtnStart = document.getElementById('m-btn-start');
+            if (btnStart && deviceState.cookStatus === 'idle') btnStart.disabled = !ready;
+            if (mBtnStart) mBtnStart.disabled = !ready;
+        }
+
+        function shakeAccessoryCheck() {
+            const row = document.getElementById('m-acc-check-row');
+            if (row) {
+                row.classList.add('animate-pulse');
+                setTimeout(() => row.classList.remove('animate-pulse'), 600);
+            }
+            const check = document.getElementById('m-acc-check');
+            if (check) check.focus();
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.4.0-D] 바텀시트 공용 컴포넌트. 폰 셸 내부에 두어 fitPhoneToColumn 스케일이
+        // 그대로 적용되도록 합니다. buildAdjustSheet/buildDetailSheet는 각각 B/C에서 정의합니다.
+        // ------------------------------------------------------------------
+        let currentSheet = null;
+
+        function openSheet(kind) {
+            currentSheet = kind;
+            const body = document.getElementById('m-sheet-body');
+            document.getElementById('m-sheet-title').innerText =
+                (kind === 'adjust') ? '세부 조정' : '조리 상세';
+            body.innerHTML = (kind === 'adjust') ? buildAdjustSheet() : buildDetailSheet();
+
+            const dim = document.getElementById('m-sheet-dim');
+            dim.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                dim.classList.remove('opacity-0');
+                document.getElementById('m-sheet').classList.remove('translate-y-full');
+            });
+        }
+
+        function closeSheet() {
+            if (!currentSheet) return;
+            const dim = document.getElementById('m-sheet-dim');
+            document.getElementById('m-sheet').classList.add('translate-y-full');
+            dim.classList.add('opacity-0');
+            setTimeout(() => { dim.classList.add('hidden'); currentSheet = null; }, 250);
+        }
+
+        // 핸들을 아래로 60px 이상 끌면 닫힙니다. V8.3.0 카드 드래그와 같은 pointer 이벤트 패턴.
+        function initSheetDragClose() {
+            const handle = document.getElementById('m-sheet-handle');
+            const sheet = document.getElementById('m-sheet');
+            let dragging = false, startY = 0, dy = 0;
+
+            handle.addEventListener('pointerdown', (e) => {
+                dragging = true; startY = e.clientY; dy = 0;
+                sheet.style.transition = 'none';
+                handle.setPointerCapture(e.pointerId);
+            });
+            handle.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                dy = Math.max(0, e.clientY - startY);
+                sheet.style.transform = `translateY(${dy}px)`;
+            });
+            const endDrag = () => {
+                if (!dragging) return;
+                dragging = false;
+                sheet.style.transition = '';
+                sheet.style.transform = '';
+                if (dy > 60) closeSheet();
+                dy = 0;
+            };
+            handle.addEventListener('pointerup', endDrag);
+            handle.addEventListener('pointercancel', endDrag);
         }
 
         // ------------------------------------------------------------------
@@ -2332,6 +3013,7 @@
 
         randomizeServiceDeviceState();
         initUI();
+        refreshDeviceUI();
     </script>
 </body>
 </html>
