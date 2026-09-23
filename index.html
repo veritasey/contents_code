@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.2.0 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.3.0 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -37,14 +37,26 @@
             height: 780px;
             transform-origin: center center;
         }
+
+        /* [V8.3.0] 쿠킹 케어 카드 롱프레스 드래그앤드롭 */
+        .care-card { touch-action: pan-y; transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease; }
+        .care-card.dragging {
+            transform: scale(1.03);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+            opacity: .96;
+            z-index: 30;
+            touch-action: none;           /* 드래그 중 스크롤 차단 */
+        }
+        .care-card.drop-target { outline: 2px dashed #0381FE; outline-offset: -2px; }
+        #care-card-list.reordering { user-select: none; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-200 h-screen overflow-hidden flex flex-col">
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.2.0</h1>
-            <p class="text-xs text-slate-400">Korean Localization & Mobile UI Scale Up</p>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.3.0</h1>
+            <p class="text-xs text-slate-400">Accessory · Searing & Cooking Care</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
             <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> API Connected</span>
@@ -115,6 +127,25 @@
                             <label class="flex-1 text-center radio-segment cursor-pointer"><input type="radio" name="timeScale" value="100" class="hidden"><span class="block py-1 rounded transition-colors text-slate-400">x100</span></label>
                         </div>
                     </div>
+
+                    <!-- [Test] 시어링 슬라이더 -->
+                    <div class="border-t border-slate-700 pt-2" id="sear-test-block">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <h2 class="text-[11px] font-bold text-orange-400">🔥 [Test] 시어링 횟수</h2>
+                            <span id="sear-count-val" class="text-[11px] font-mono font-bold text-orange-300 bg-slate-900 px-2 py-1 rounded">--</span>
+                        </div>
+                        <input type="range" id="test-sear-count" min="0" max="5" value="2"
+                               class="w-full appearance-none bg-transparent"
+                               oninput="setSearParams(parseInt(this.value), state.searSec, 'lcd')">
+
+                        <div class="flex justify-between items-center mb-1.5 mt-2">
+                            <h2 class="text-[11px] font-bold text-orange-400">⏱️ [Test] 1회 시어링 시간</h2>
+                            <span id="sear-sec-val" class="text-[11px] font-mono font-bold text-orange-300 bg-slate-900 px-2 py-1 rounded">--</span>
+                        </div>
+                        <input type="range" id="test-sear-sec" min="20" max="90" step="5" value="45"
+                               class="w-full appearance-none bg-transparent"
+                               oninput="setSearParams(state.searCount, parseInt(this.value), 'lcd')">
+                    </div>
                 </div>
 
                 <div>
@@ -132,9 +163,31 @@
                     <div class="flex flex-col gap-1.5" id="grid-doneness"></div>
                 </div>
 
+                <div id="step-accessory" class="hidden opacity-0 transition-opacity duration-300">
+                    <h2 class="text-[11px] font-bold text-slate-400 mb-1.5">4. 액세서리 구성</h2>
+                    <div class="mb-2">
+                        <p class="text-[9px] text-slate-500 mb-1">하단 용기</p>
+                        <div class="grid grid-cols-2 gap-1.5" id="grid-vessel"></div>
+                    </div>
+                    <div class="mb-2">
+                        <p class="text-[9px] text-slate-500 mb-1">하단 그릴</p>
+                        <div class="grid grid-cols-2 gap-1.5" id="grid-grill"></div>
+                    </div>
+                    <div class="mb-2">
+                        <p class="text-[9px] text-slate-500 mb-1">상단</p>
+                        <div class="grid grid-cols-2 gap-1.5" id="grid-top"></div>
+                    </div>
+                    <div id="row-searmode" class="hidden">
+                        <p class="text-[9px] text-slate-500 mb-1">시어링 방식</p>
+                        <div class="grid grid-cols-2 gap-1.5" id="grid-searmode"></div>
+                    </div>
+                </div>
+
                 <div id="step-action" class="hidden mt-auto pt-2">
                     <div class="text-center text-[10px] font-mono font-bold text-sky-400 mb-1.5 bg-slate-800 p-1.5 rounded" id="eta-preview">예상 소요 시간 계산 중...</div>
+                    <div id="accessory-summary" class="hidden text-center text-[9px] text-orange-300 font-mono bg-slate-900 border border-orange-900 px-2 py-1 rounded mb-1.5"></div>
                     <div id="personalize-badge" class="hidden text-center text-[9px] text-sky-300 font-mono bg-slate-900 border border-sky-900 px-2 py-1 rounded mb-1.5"></div>
+                    <div id="sear-personalize-badge" class="hidden text-center text-[9px] text-orange-300 font-mono bg-slate-900 border border-orange-900 px-2 py-1 rounded mb-1.5"></div>
                     <button onclick="startSimulation()" id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg shadow-lg transition-colors">
                         🔥 조리 시작 (Start Cooking)
                     </button>
@@ -155,16 +208,20 @@
                 <div class="flex justify-between gap-1.5">
                     <div class="bg-slate-800 p-1.5 rounded-lg flex-1 border border-slate-700">
                         <p class="text-[9px] text-slate-400 text-center">측정 두께 (mm)</p>
-                        <p class="text-lg font-mono font-bold text-white text-center" id="val-thickness">--</p>
+                        <p class="text-base font-mono font-bold text-white text-center" id="val-thickness">--</p>
                     </div>
                     <div class="bg-slate-800 p-1.5 rounded-lg flex-1 border border-slate-700 relative">
                         <p class="text-[9px] text-emerald-400 font-bold text-center">재료 온도 (°C)</p>
-                        <p class="text-lg font-mono font-bold text-white text-center transition-colors" id="val-temp">22.0</p>
+                        <p class="text-base font-mono font-bold text-white text-center transition-colors" id="val-temp">22.0</p>
                         <div id="temp-alert" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded hidden">가열중단</div>
+                    </div>
+                    <div class="bg-slate-800 p-1.5 rounded-lg flex-1 border border-orange-900">
+                        <p class="text-[9px] text-orange-400 font-bold text-center">겉면 온도 (°C)</p>
+                        <p class="text-base font-mono font-bold text-white text-center" id="val-surface">--</p>
                     </div>
                     <div class="bg-slate-900 p-1.5 rounded-lg flex-1 border border-sky-900 shadow-inner">
                         <p class="text-[9px] text-sky-500 text-center font-bold">소요 시간</p>
-                        <p class="text-lg font-mono font-bold text-sky-400 text-center tracking-wider" id="val-time">00:00</p>
+                        <p class="text-base font-mono font-bold text-sky-400 text-center tracking-wider" id="val-time">00:00</p>
                     </div>
                 </div>
                 <div class="w-full bg-slate-800 rounded-full h-1 mt-2 overflow-hidden relative">
@@ -192,7 +249,7 @@
                         </div>
                     </div>
                     <div id="mcu-cook" class="bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center">
-                        <span>3. 상하 복사열 조리</span>
+                        <span>3. 상하 복사열 조리 <span id="sear-counter" class="text-orange-400 font-bold"></span></span>
                         <div class="text-right">
                             <span class="text-red-400 font-bold" id="t-cook"></span>
                             <span class="text-slate-500 ml-2" id="d-cook">--</span>
@@ -210,7 +267,7 @@
 
             <!-- 3. HW Actuators -->
             <div class="panel rounded-xl p-3 border-l-4 border-amber-500">
-                <h3 class="text-[11px] font-bold text-amber-400 mb-2">⚙️ HW Actuators (PWM & Motor)</h3>
+                <h3 class="text-[11px] font-bold text-amber-400 mb-2">⚙️ HW Actuators (PWM & 승강)</h3>
                 <div class="flex justify-between items-end h-16 text-center">
                     <div class="w-[30%] bg-slate-800 rounded flex flex-col justify-end items-center h-full relative overflow-hidden border border-slate-700">
                         <div id="pwm-top" class="pwm-bar w-full bg-amber-500 opacity-80" style="height: 0%;"></div>
@@ -243,7 +300,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.2.0 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.3.0 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -310,6 +367,7 @@
                                     <span class="text-sm font-bold mt-1 text-gray-500 ml-1">°C</span>
                                 </div>
                                 <span class="text-[12px] font-bold text-gray-500 mt-2" id="m-time-remain">00:00</span>
+                                <span class="text-[10px] font-bold text-orange-500 mt-1" id="m-surface"></span>
                             </div>
                         </div>
                     </div>
@@ -363,11 +421,42 @@
                     </div>
                     <!-- /TAB VIEW: 기기제어 -->
 
-                    <!-- TAB VIEW: 서비스 -->
-                    <div id="m-service-view" class="hidden flex-col">
+                    <!-- TAB VIEW: 커뮤니티 (전부 컨셉 제시용 하드코딩 데이터이며 실제 서버 연동은 없습니다) -->
+                    <div id="m-community-view" class="hidden flex-col">
 
-                        <!-- Service Card 1: SmartThings — 실내 공기 환경 -->
+                        <!-- Community Card 1: 인기 프리셋 -->
                         <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                            <div class="text-[10px] font-bold text-gray-400 mb-1">커뮤니티</div>
+                            <h3 class="text-[13px] font-bold text-gray-800 mb-3">인기 프리셋</h3>
+                            <div id="community-preset-list" class="flex flex-col gap-2"></div>
+                        </div>
+
+                        <!-- Community Card 2: 내 프리셋 -->
+                        <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                            <div class="text-[10px] font-bold text-gray-400 mb-1">커뮤니티</div>
+                            <h3 class="text-[13px] font-bold text-gray-800 mb-3">내 프리셋</h3>
+                            <p class="text-[11px] text-gray-400 mb-3" id="my-preset-desc">마지막으로 완료한 조리를 프리셋으로 게시할 수 있어요.</p>
+                            <button id="btn-publish-preset" onclick="publishMyPreset()" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors" disabled>내 프리셋 게시하기</button>
+                            <div id="my-preset-published-msg" class="hidden text-[11px] text-[#0381FE] font-bold mt-2.5">✅ 게시 완료! 다른 사용자가 불러올 수 있어요.</div>
+                        </div>
+
+                        <!-- Community Card 3: 같은 재료, 다른 설정 -->
+                        <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                            <div class="text-[10px] font-bold text-gray-400 mb-1">커뮤니티</div>
+                            <h3 class="text-[13px] font-bold text-gray-800 mb-3">같은 재료, 다른 설정</h3>
+                            <div id="community-distribution" class="flex flex-col gap-2"></div>
+                        </div>
+
+                    </div>
+                    <!-- /TAB VIEW: 커뮤니티 -->
+
+                    <!-- TAB VIEW: 쿠킹 케어 -->
+                    <div id="m-care-view" class="hidden flex-col">
+                        <p class="text-[10px] text-gray-400 mb-2 px-1" id="care-reorder-hint">길게 눌러 순서를 바꿀 수 있어요.</p>
+                        <div id="care-card-list" class="flex flex-col">
+
+                        <!-- Card: SmartThings — 실내 공기 환경 -->
+                        <div class="care-card bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" data-card-id="air">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">SmartThings</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">실내 공기 환경</h3>
                             <div class="flex items-center justify-between bg-[#F4F4F4] rounded-xl p-3 mb-1.5">
@@ -388,8 +477,8 @@
                             <div id="svc-air-action-msg" class="hidden text-[10px] font-bold text-[#0381FE] mt-2.5"></div>
                         </div>
 
-                        <!-- Service Card 2: Samsung Food — 추천 시즈닝 믹스 -->
-                        <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                        <!-- Card: Samsung Food — 추천 시즈닝 믹스 -->
+                        <div class="care-card bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" data-card-id="seasoning">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">Samsung Food</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">추천 시즈닝 믹스</h3>
                             <div id="svc-seasoning-empty" class="text-[11px] text-gray-400">재료를 선택하면 추천 시즈닝을 보여드려요.</div>
@@ -400,8 +489,8 @@
                             </div>
                         </div>
 
-                        <!-- Service Card 3: Samsung Health — 식후 웰니스 브리핑 -->
-                        <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                        <!-- Card: Samsung Health — 식후 웰니스 브리핑 -->
+                        <div class="care-card bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" data-card-id="health">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">Samsung Health</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">식사 후 웰니스 브리핑</h3>
 
@@ -429,8 +518,8 @@
                             </div>
                         </div>
 
-                        <!-- Service Card 4: Samsung Food — 냉장고 재고 · 유통기한 -->
-                        <div class="bg-white rounded-[20px] p-4 mb-3 one-ui-shadow">
+                        <!-- Card: Samsung Food — 냉장고 재고 · 유통기한 -->
+                        <div class="care-card bg-white rounded-[20px] p-4 mb-3 one-ui-shadow" data-card-id="pantry">
                             <div class="text-[10px] font-bold text-gray-400 mb-1">Samsung Food</div>
                             <h3 class="text-[13px] font-bold text-gray-800 mb-3">냉장고 재고 · 유통기한</h3>
                             <div id="svc-pantry-caption" class="text-[10px] text-gray-400 mb-2"></div>
@@ -438,8 +527,9 @@
                             <button onclick="openExternalService('Samsung Food')" class="w-full bg-[#F4F4F4] active:bg-gray-200 text-gray-700 text-[11px] font-bold py-2.5 rounded-xl transition-colors">Samsung Food에서 재고 확인</button>
                         </div>
 
+                        </div>
                     </div>
-                    <!-- /TAB VIEW: 서비스 -->
+                    <!-- /TAB VIEW: 쿠킹 케어 -->
 
                 </div>
 
@@ -454,14 +544,18 @@
                 </div>
 
                 <!-- 5. Bottom Menu Tab -->
-                <div class="absolute bottom-0 left-0 right-0 h-[60px] bg-white border-t border-gray-200 flex text-[11px] font-bold z-10">
+                <div class="absolute bottom-0 left-0 right-0 h-[60px] bg-white border-t border-gray-200 flex text-[10px] font-bold z-10">
                     <div id="m-tab-device" onclick="switchMobileTab('device')" class="flex-1 flex flex-col items-center justify-center text-[#0381FE] cursor-pointer">
                         <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path></svg>
                         기기제어
                     </div>
-                    <div id="m-tab-service" onclick="switchMobileTab('service')" class="flex-1 flex flex-col items-center justify-center text-gray-400 cursor-pointer">
-                        <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
-                        서비스
+                    <div id="m-tab-community" onclick="switchMobileTab('community')" class="flex-1 flex flex-col items-center justify-center text-gray-400 cursor-pointer">
+                        <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.97 5.97 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+                        커뮤니티
+                    </div>
+                    <div id="m-tab-care" onclick="switchMobileTab('care')" class="flex-1 flex flex-col items-center justify-center text-gray-400 cursor-pointer">
+                        <svg class="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                        쿠킹 케어
                     </div>
                 </div>
             </div>
@@ -470,11 +564,29 @@
 
     <script>
         let deviceState = { power: true, cookStatus: 'idle', currentPhase: 0 };
-        let thermalMetrics = { targetTempPull: 0, targetTempFinal: 0, currentMaterialTemp: 22.0, remainingTimeSec: 0 };
-        let timeScale = 30; 
-        
+        let thermalMetrics = { targetTempPull: 0, targetTempFinal: 0, currentMaterialTemp: 22.0, remainingTimeSec: 0, currentSurfaceTemp: 22.0 };
+        let timeScale = 30;
+
         let calculatedPhaseTimes = { temper: 0, cook: 0, finish: 0 }; // 단계별 시간 저장
-        let state = { category: null, cut: null, doneness: null, hoodFinishAction: null };
+        let state = {
+            category: null, cut: null, doneness: null, hoodFinishAction: null,
+            // 액세서리 (V8.3.0)
+            bottomVessel: null,  // 'none' | 'glass'
+            bottomGrill: null,   // 'none' | 'stainless' | 'copper' | 'stainless+copper'
+            topAccessory: null,  // 'none' | 'copper'
+            searMode: null,      // 'pre' | 'post'
+            // 시어링 파라미터
+            searCount: 0,        // 0~5
+            searSec: 0,          // 20~90
+            searUserTouched: false
+        };
+
+        // 시어링 런타임 (V8.3.0)
+        let phase3Segments = [];
+        let currentSegKey = null;
+        let surfaceTemp = 22.0;
+
+        function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
         let simTick = null;
         let virtualTime = 0;
@@ -526,6 +638,42 @@
         const DAILY_TARGET_KCAL = '2,000 kcal'; // 오늘 권장 섭취 칼로리 (임의 참고값)
         const AIR_QUALITY_BASELINE = 14; // 미세먼지(PM2.5) 일반 실내 기준값, ㎍/㎥
         const AIR_QUALITY_STANDARD = 15; // "좋음" 판정 기준선, ㎍/㎥
+
+        // ------------------------------------------------------------------
+        // [V8.3.0] 액세서리 시스템 데이터 테이블
+        // ------------------------------------------------------------------
+        const accessoryDefaults = {
+            beef:    { vessel:'none',  grill:'stainless', top:'copper', searMode:'pre' },
+            pork:    { vessel:'none',  grill:'stainless', top:'copper', searMode:'pre' },
+            chicken: { vessel:'glass', grill:'stainless', top:'copper', searMode:'pre' },
+            seafood: { vessel:'glass', grill:'none',      top:'none',   searMode:'pre' },
+            veges:   { vessel:'glass', grill:'none',      top:'none',   searMode:'pre' },
+            grains:  { vessel:'glass', grill:'none',      top:'none',   searMode:'pre' }
+        };
+
+        const grillMult  = { 'none':1.00, 'stainless':1.00, 'copper':0.90, 'stainless+copper':0.95 };
+        const vesselMult = { 'none':1.00, 'glass':1.15 };
+
+        const searBaseline = {
+            beef:    { searSec:45, gapSec:45, count:2 },
+            pork:    { searSec:60, gapSec:45, count:2 },
+            chicken: { searSec:40, gapSec:60, count:2 }
+        };
+
+        // 상단 그릴 높이 (mm) — 기존 "후드 개도율"을 대체
+        const TOP_HEIGHT = { contact:30, near:70, mid:150, far:300 };
+
+        // [튜닝 예정] 구간별 심부 승온 가중치. 실측 근거 없는 임시값입니다.
+        const TEMP_WEIGHT = { rise:1.0, sear:2.2, gap:0.5 };
+
+        // [튜닝 예정] 구리 그릴 접촉 시 표면 도달 온도(℃). 실측 근거 없는 임시값입니다.
+        const SEAR_PEAK = 190;
+
+        // 판정 기준은 용기가 아니라 그릴입니다. 유리 용기는 육즙받이로 아래에 깔리고
+        // 재료는 그릴 위에 올라가므로, 유리 용기가 있어도 그릴만 있으면 상단 접촉이 가능합니다.
+        function isSearingAvailable() {
+            return state.topAccessory === 'copper' && state.bottomGrill !== 'none';
+        }
 
         // [서비스 탭] 후드/공기청정기/에어컨의 현재 on/off 상태.
         // 실제 기기가 없으므로 앱을 열 때 한 번만 무작위로 정하고, 이후엔 버튼으로만 바뀝니다.
@@ -657,6 +805,134 @@
             if(mBadge) { mBadge.classList.remove('hidden'); mBadge.innerText = text; }
         }
 
+        // ------------------------------------------------------------------
+        // [V8.3.0] 시어링 계획 산출 — ① 자동 추천 → ② 개인화 델타 → ③ 사용자 조절
+        // ------------------------------------------------------------------
+        function recommendSearPlan(cat, done, thickness) {
+            const base = searBaseline[cat];
+            if (!base) return { count: 0, searSec: 0, gapSec: 0 };
+
+            let count = base.count, searSec = base.searSec;
+            const gapSec = base.gapSec;
+
+            if (thickness < 25) count = Math.max(1, count - 1);
+            if (thickness > 35) count = count + 1;
+
+            if (done.includes('레어') && !done.includes('미디엄')) searSec = Math.round(searSec * 0.8);
+            else if (done.includes('웰던')) searSec = Math.round(searSec * 1.2);
+
+            return { count, searSec, gapSec };
+        }
+
+        // 개인화 델타는 기존 온도 오프셋과 별도 키를 씁니다. 절대값이 아니라
+        // 추천값 대비 델타로 저장해, 나중에 추천 공식을 튜닝해도 사용자 취향이 따라오게 합니다.
+        function getSearKey(cat, cut, done) {
+            return `minmax_sear_${cat}_${cut}_${done}`.replace(/\s+/g, '_');
+        }
+        function getSearDelta(cat, cut, done) {
+            if (!cat || !cut || !done) return { countDelta: 0, searSecDelta: 0 };
+            try {
+                const raw = localStorage.getItem(getSearKey(cat, cut, done));
+                return raw ? JSON.parse(raw) : { countDelta: 0, searSecDelta: 0 };
+            } catch (e) { return { countDelta: 0, searSecDelta: 0 }; }
+        }
+        function fmtDelta(n) { return (n >= 0 ? '+' : '') + n; }
+
+        function resolveSearParams() {
+            if (!isSearingAvailable()) { state.searCount = 0; state.searSec = 0; return; }
+            if (state.searUserTouched) return;   // 직접 만진 값은 덮어쓰지 않음
+
+            const slider = parseInt(document.getElementById('test-thickness').value);
+            const thickness = slider === 0 ? 25 : slider;
+
+            const rec = recommendSearPlan(state.category, state.doneness || '바로 조리', thickness);
+            const d = getSearDelta(state.category, state.cut, state.doneness);
+
+            state.searCount = clamp(rec.count + (d.countDelta || 0), 0, 5);
+            state.searSec = clamp(rec.searSec + (d.searSecDelta || 0), 20, 90);
+        }
+
+        function updateSearPersonalizeBadge() {
+            const badge = document.getElementById('sear-personalize-badge');
+            if (!badge) return;
+            if (!isSearingAvailable() || !state.category || !state.cut || !state.doneness) {
+                badge.classList.add('hidden');
+                return;
+            }
+            const d = getSearDelta(state.category, state.cut, state.doneness);
+            if (!d.countDelta && !d.searSecDelta) {
+                badge.classList.add('hidden');
+                return;
+            }
+            badge.classList.remove('hidden');
+            badge.innerText = `🔥 시어링 개인화: 횟수 ${fmtDelta(d.countDelta || 0)}회, 시간 ${fmtDelta(d.searSecDelta || 0)}초 (직전 조리 반영)`;
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.3.0] Phase 3 구간 분할 — 선/후시어는 배열 순서만 뒤집어 표현합니다.
+        // ------------------------------------------------------------------
+        function buildPhase3Segments(cookSec, count, searSec, gapSec, mode) {
+            if (!count || count === 0) return [{ kind: 'rise', dur: cookSec }];
+
+            let c = count, s = searSec;
+            const searTotalOf = (n, sec) => (sec + gapSec) * n - gapSec;   // 마지막 간격 제외
+
+            // 안전장치 1: 시어링이 조리 구간의 60%를 넘으면 횟수를 줄임
+            while (searTotalOf(c, s) > cookSec * 0.6 && c > 1) c--;
+            // 안전장치 2: 그래도 넘치면 1회 시간을 줄임 (하한 10초)
+            if (searTotalOf(c, s) > cookSec * 0.6) {
+                s = Math.max(10, Math.floor((cookSec * 0.6 + gapSec) / c) - gapSec);
+            }
+
+            const riseSec = Math.max(0, cookSec - searTotalOf(c, s));
+
+            const cycle = [];
+            for (let i = 0; i < c; i++) {
+                cycle.push({ kind: 'sear', dur: s, index: i + 1, total: c });
+                if (i < c - 1) cycle.push({ kind: 'gap', dur: gapSec });
+            }
+
+            return mode === 'pre'
+                ? [...cycle, { kind: 'rise', dur: riseSec }]
+                : [{ kind: 'rise', dur: riseSec }, ...cycle];
+        }
+
+        // 전체 승온분(base -> pull)을 구간별 가중 시간 비율로 나눠 갖습니다.
+        function assignSegmentTemps(segments, baseTemp, pullTemp) {
+            const totalW = segments.reduce((s, g) => s + TEMP_WEIGHT[g.kind] * g.dur, 0);
+            let t = baseTemp, offset = 0;
+
+            segments.forEach(g => {
+                g.startOffset = offset;
+                g.startT = t;
+                const gain = totalW > 0 ? (pullTemp - baseTemp) * (TEMP_WEIGHT[g.kind] * g.dur) / totalW : 0;
+                t += gain;
+                g.endT = t;
+                offset += g.dur;
+            });
+
+            // 부동소수 오차 보정
+            if (segments.length) segments[segments.length - 1].endT = pullTemp;
+        }
+
+        function surfaceGap() {
+            return state.bottomGrill && state.bottomGrill !== 'none' ? 20 : 8;   // 직화 vs 용기 간접열
+        }
+
+        function computeSurface(seg, p, coreTemp) {
+            const idle = coreTemp + surfaceGap();
+            if (!seg) return idle;
+            if (seg.kind === 'sear') {
+                const start = (seg.surfStart !== undefined) ? seg.surfStart : idle;
+                return start + (SEAR_PEAK - start) * p;
+            }
+            if (seg.kind === 'gap') {
+                const start = (seg.surfStart !== undefined) ? seg.surfStart : SEAR_PEAK;
+                return start + (idle - start) * p;
+            }
+            return idle;
+        }
+
         function submitFeedback(direction) {
             if(!state.category || !state.cut || !state.doneness) return;
             let offset = getPersonalOffset(state.category, state.cut, state.doneness);
@@ -688,29 +964,32 @@
             return 30; // 상온 이상 (기본 안정화)
         }
 
-        function calculatePhaseTimes(cat, thickness, doneness, initTemp) {
+        function calculatePhaseTimes(cat, thickness, doneness, initTemp, vessel, grill) {
             let temperSec = getTemperTime(cat, initTemp);
-            
+
             let cookBase = 840; // 14 mins (beef baseline)
-            if(cat === 'pork') cookBase = 900; 
+            if(cat === 'pork') cookBase = 900;
             if(cat === 'chicken') cookBase = 1080;
             if(cat === 'seafood' || cat === 'veges') cookBase = 600;
             if(cat === 'grains') cookBase = 1200;
 
             let thickMult = (cat === 'grains') ? 1.0 : Math.max(0.5, thickness / 25.0);
             let doneMult = 1.0;
-            
+
             if(doneness) {
                 if (doneness.includes('레어') && !doneness.includes('미디엄')) doneMult = 0.85;
-                else if (doneness.includes('미디엄 레어')) doneMult = 1.0; 
+                else if (doneness.includes('미디엄 레어')) doneMult = 1.0;
                 else if (doneness === '미디엄') doneMult = 1.15;
                 else if (doneness.includes('미디엄 웰')) doneMult = 1.3;
                 else if (doneness.includes('웰던')) doneMult = 1.45;
             }
-            
-            let cookSec = Math.floor(cookBase * thickMult * doneMult);
+
+            const gm = grillMult[grill || 'none']   ?? 1.0;
+            const vm = vesselMult[vessel || 'none'] ?? 1.0;
+
+            let cookSec = Math.floor(cookBase * thickMult * doneMult * gm * vm);
             let finishSec = 180; // 기본 잔열 레스팅 3분
-            
+
             return { temper: temperSec, cook: cookSec, finish: finishSec };
         }
 
@@ -733,7 +1012,7 @@
             const thick = sliderVal === 0 ? 25 : sliderVal;
             const targetDone = state.doneness || '바로 조리';
             
-            calculatedPhaseTimes = calculatePhaseTimes(state.category, thick, targetDone, startTemp);
+            calculatedPhaseTimes = calculatePhaseTimes(state.category, thick, targetDone, startTemp, state.bottomVessel, state.bottomGrill);
             const fm = (sec) => `${Math.floor(sec/60)}분 ${String(Math.floor(sec%60)).padStart(2,'0')}초`;
             
             document.getElementById('d-idle').innerText = `10초`; 
@@ -749,7 +1028,7 @@
             const startTemp = parseFloat(document.getElementById('test-init-temp').value);
             const targetDone = state.doneness || '바로 조리';
             
-            const times = calculatePhaseTimes(state.category, thickness, targetDone, startTemp);
+            const times = calculatePhaseTimes(state.category, thickness, targetDone, startTemp, state.bottomVessel, state.bottomGrill);
             const totalSec = 10 + times.temper + times.cook + times.finish; // idle 포함
             
             const m = Math.floor(totalSec / 60);
@@ -762,6 +1041,145 @@
 
             updateCoreEngineTargets();
             updatePersonalizeBadge();
+            updateSearPersonalizeBadge();
+
+            // 두께 등 추천값에 영향을 주는 입력이 바뀌면(사용자가 직접 만지지 않은 한)
+            // 시어링 추천값도 함께 재계산합니다. 델타(사용자 취향)는 그대로 유지됩니다.
+            resolveSearParams();
+            updateSearControlsUI();
+            updateAccessorySummary();
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.3.0] 액세서리 UI
+        // ------------------------------------------------------------------
+        const vesselLabels = { none: '없음', glass: '유리 용기' };
+        const grillLabels  = { none: '없음', stainless: '스테인레스', copper: '구리', 'stainless+copper': '스테인레스+구리' };
+        const topLabels    = { none: '없음', copper: '구리' };
+
+        function applyAccessoryDefaults(cat) {
+            const d = accessoryDefaults[cat];
+            if(!d) return;
+            state.bottomVessel = d.vessel;
+            state.bottomGrill = d.grill;
+            state.topAccessory = d.top;
+            state.searMode = d.searMode;
+            state.searUserTouched = false;
+            syncAccessoryUI();
+        }
+
+        function renderAccessoryGrid(containerId, options, current, onSelect) {
+            const grid = document.getElementById(containerId);
+            if(!grid) return;
+            grid.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                if(opt.disabled) {
+                    btn.className = 'disabled-slot py-1.5 px-1 rounded border border-slate-700 text-[10px] w-full text-center';
+                    btn.disabled = true;
+                } else {
+                    btn.className = 'bg-slate-700 hover:bg-slate-600 py-1.5 px-1 rounded border border-slate-600 text-[10px] transition-all w-full font-bold text-white' +
+                        (opt.value === current ? ' glow bg-slate-600' : '');
+                    btn.onclick = () => onSelect(opt.value);
+                }
+                btn.innerText = opt.label;
+                grid.appendChild(btn);
+            });
+        }
+
+        function syncAccessoryUI() {
+            if(!state.category) return;
+
+            // 인터락: 하단 그릴이 '없음'이면 상단 구리 그릴은 선택 불가 + 자동 강등
+            const grillNone = state.bottomGrill === 'none' || !state.bottomGrill;
+            if(grillNone && state.topAccessory === 'copper') {
+                state.topAccessory = 'none';
+            }
+
+            renderAccessoryGrid('grid-vessel', [
+                { value: 'none', label: vesselLabels.none },
+                { value: 'glass', label: vesselLabels.glass }
+            ], state.bottomVessel, (v) => { state.bottomVessel = v; state.searUserTouched = false; syncAccessoryUI(); updateETA(); });
+
+            renderAccessoryGrid('grid-grill', [
+                { value: 'none', label: grillLabels.none },
+                { value: 'stainless', label: grillLabels.stainless },
+                { value: 'copper', label: grillLabels.copper },
+                { value: 'stainless+copper', label: grillLabels['stainless+copper'] }
+            ], state.bottomGrill, (v) => { state.bottomGrill = v; state.searUserTouched = false; syncAccessoryUI(); updateETA(); });
+
+            renderAccessoryGrid('grid-top', [
+                { value: 'none', label: topLabels.none },
+                { value: 'copper', label: grillNone ? '구리 그릴 (그릴 필요)' : '구리 그릴', disabled: grillNone }
+            ], state.topAccessory, (v) => { state.topAccessory = v; state.searUserTouched = false; syncAccessoryUI(); updateETA(); });
+
+            const searAvailable = isSearingAvailable();
+            const searRow = document.getElementById('row-searmode');
+            if(searRow) searRow.classList.toggle('hidden', !searAvailable);
+            if(searAvailable) {
+                renderAccessoryGrid('grid-searmode', [
+                    { value: 'pre', label: '선시어' },
+                    { value: 'post', label: '후시어' }
+                ], state.searMode, (v) => { state.searMode = v; syncAccessoryUI(); updateETA(); });
+            }
+
+            resolveSearParams();
+            updateSearControlsUI();
+            updateAccessorySummary();
+        }
+
+        function updateSearControlsUI() {
+            const block = document.getElementById('sear-test-block');
+            const countEl = document.getElementById('test-sear-count');
+            const secEl = document.getElementById('test-sear-sec');
+            const countVal = document.getElementById('sear-count-val');
+            const secVal = document.getElementById('sear-sec-val');
+            const counterEl = document.getElementById('sear-counter');
+            if(!block) return;
+
+            const available = isSearingAvailable();
+            if(!available) {
+                block.classList.add('opacity-40', 'pointer-events-none');
+                if(countVal) countVal.innerText = '시어링 없음';
+                if(secVal) secVal.innerText = '시어링 없음';
+                if(counterEl) counterEl.innerText = '';
+                return;
+            }
+            block.classList.remove('opacity-40', 'pointer-events-none');
+            if(countEl) countEl.value = state.searCount;
+            if(secEl) secEl.value = state.searSec;
+            if(countVal) countVal.innerText = state.searCount + '회';
+            if(secVal) secVal.innerText = state.searSec + '초';
+        }
+
+        function setSearParams(count, sec, source) {
+            if(!isSearingAvailable()) return;
+            state.searCount = clamp(count, 0, 5);
+            state.searSec = clamp(sec, 20, 90);
+            state.searUserTouched = true;
+            updateSearControlsUI();
+            updateAccessorySummary();
+            if(deviceState.cookStatus === 'idle') updateETA();
+        }
+
+        function updateAccessorySummary() {
+            const el = document.getElementById('accessory-summary');
+            if(!el) return;
+            if(!state.category) { el.classList.add('hidden'); return; }
+
+            const bottomParts = [];
+            if(state.bottomVessel === 'glass') bottomParts.push('유리 용기');
+            if(state.bottomGrill && state.bottomGrill !== 'none') bottomParts.push(`${grillLabels[state.bottomGrill]} 그릴`);
+            const bottomStr = bottomParts.length ? bottomParts.join(' + ') : '없음';
+            const topStr = state.topAccessory === 'copper' ? '구리' : '없음';
+
+            let searStr = '시어링 없음';
+            if(isSearingAvailable() && state.searCount > 0) {
+                searStr = `${state.searMode === 'post' ? '후시어' : '선시어'} ${state.searCount}회 × ${state.searSec}초`;
+            }
+
+            el.innerText = `🍳 ${bottomStr} / 상단 ${topStr} · ${searStr}`;
+            el.classList.remove('hidden');
         }
 
         function updateThicknessLabel(val) {
@@ -900,6 +1318,10 @@
             window.addEventListener('resize', updateCatScrollIndicator);
             updateCatScrollIndicator();
             enableMouseDragScroll(mCatContainer);
+
+            // [V8.3.0] 쿠킹 케어 카드 순서 복원 + 드래그앤드롭 초기화
+            applyCareOrder();
+            initCareReorder();
         }
 
         // 터치 스와이프가 아닌 데스크톱 마우스로도 가로 스크롤이 되도록:
@@ -955,7 +1377,7 @@
             state.category = catId; state.cut = null; state.doneness = null; state.hoodFinishAction = hoodAction;
             Array.from(document.getElementById('grid-category').children).forEach(b => { b.classList.remove('glow', 'bg-slate-600'); b.classList.add('bg-slate-700'); });
             btnEl.classList.add('glow', 'bg-slate-600');
-            
+
             const cutGrid = document.getElementById('grid-cut'); cutGrid.innerHTML = '';
             config.cuts[catId].forEach(cut => {
                 const btn = document.createElement('button');
@@ -966,10 +1388,14 @@
             });
             document.getElementById('step-cut').classList.remove('hidden');
             setTimeout(() => document.getElementById('step-cut').classList.remove('opacity-0'), 50);
-            
+
             document.getElementById('step-doneness').classList.add('hidden', 'opacity-0');
+            document.getElementById('step-accessory').classList.add('hidden', 'opacity-0');
             document.getElementById('step-action').classList.add('hidden');
-            
+
+            // 카테고리를 다시 고르면 액세서리는 그 카테고리의 기본값으로 리셋됩니다.
+            applyAccessoryDefaults(catId);
+
             syncMobileUI();
             updateETA();
         }
@@ -1023,7 +1449,11 @@
             Array.from(document.getElementById('grid-doneness').children).forEach(b => { b.classList.remove('glow', 'bg-slate-600'); });
             if(btnEl) btnEl.classList.add('glow', 'bg-slate-600');
             document.getElementById('step-action').classList.remove('hidden');
-            
+
+            document.getElementById('step-accessory').classList.remove('hidden');
+            setTimeout(() => document.getElementById('step-accessory').classList.remove('opacity-0'), 50);
+            applyAccessoryDefaults(state.category);
+
             syncMobileUI();
             updateETA();
         }
@@ -1054,6 +1484,14 @@
             thermalMetrics.targetTempFinal = profile.final;
             virtualTime = 0;
             deviceState.currentPhase = 0;
+
+            // [V8.3.0] 시어링 계획 확정 및 Phase 3 구간 분할 (타임라인 확정 직후 1회)
+            resolveSearParams();
+            const gapSec = (searBaseline[state.category] && searBaseline[state.category].gapSec) || 45;
+            phase3Segments = buildPhase3Segments(calculatedPhaseTimes.cook, state.searCount, state.searSec, gapSec, state.searMode);
+            assignSegmentTemps(phase3Segments, Math.max(startTemp, 8.0), profile.pull);
+            currentSegKey = null;
+            surfaceTemp = startTemp + surfaceGap();
 
             goldenTimeTriggered = false;
             if(goldenTimeInterval) clearInterval(goldenTimeInterval);
@@ -1086,12 +1524,24 @@
                 addLog(`[Personalize AI] 개인화 오프셋 적용: ${profile.offset >= 0 ? '+' : ''}${profile.offset.toFixed(1)}°C`, 'text-sky-300 font-bold');
             }
 
+            const bottomCfgParts = [];
+            if(state.bottomVessel === 'glass') bottomCfgParts.push('유리 용기');
+            if(state.bottomGrill && state.bottomGrill !== 'none') bottomCfgParts.push(`${grillLabels[state.bottomGrill]} 그릴`);
+            addLog(`[Config] 하단: ${bottomCfgParts.length ? bottomCfgParts.join(' + ') : '없음'} / 상단: ${state.topAccessory === 'copper' ? '구리 그릴' : '없음'}`, 'text-slate-400');
+            if(isSearingAvailable() && state.searCount > 0) {
+                addLog(`[Config] 시어링: ${state.searMode === 'post' ? '후시어' : '선시어'} ${state.searCount}회 × ${state.searSec}초 (간격 ${gapSec}초)`, 'text-orange-400 font-bold');
+            } else {
+                addLog(`[Config] 시어링: 없음`, 'text-slate-400');
+            }
+
             ['idle', 'temper', 'cook', 'finish'].forEach(id => {
                 document.getElementById('mcu-' + id).className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 transition-all duration-300 flex justify-between items-center';
                 document.getElementById('mcu-' + id).style.boxShadow = 'none';
             });
             
             document.getElementById('val-temp').innerText = startTemp.toFixed(1);
+            document.getElementById('val-surface').innerText = surfaceTemp.toFixed(0);
+            document.getElementById('val-surface').classList.remove('text-orange-400');
             document.getElementById('temp-alert').classList.add('hidden');
             document.getElementById('val-temp').classList.remove('text-amber-400', 'text-red-400');
 
@@ -1126,9 +1576,14 @@
             const startTemp = parseFloat(document.getElementById('test-init-temp').value);
             document.getElementById('val-temp').innerText = startTemp.toFixed(1);
             document.getElementById('m-temp').innerText = startTemp.toFixed(1);
-            
+            surfaceTemp = startTemp + surfaceGap();
+            document.getElementById('val-surface').innerText = '--';
+            document.getElementById('val-surface').classList.remove('text-orange-400');
+            document.getElementById('m-surface').innerText = '';
+            document.getElementById('sear-counter').innerText = '';
+
             setPWM(0,0);
-            setHood('완전 개방<br>(100%)', 'bg-slate-800 border-slate-600 text-slate-300');
+            setTopGrillHeight(TOP_HEIGHT.far, '완전 개방', 'bg-slate-800 border-slate-600 text-slate-300');
             
             document.getElementById('m-btn-start').classList.remove('hidden');
             document.getElementById('m-btn-stop').classList.add('hidden');
@@ -1196,32 +1651,57 @@
             if (virtualTime < t1) {
                 if(deviceState.currentPhase !== 1) triggerPhase(1);
                 currentTemp = startTemp;
-            } 
+                surfaceTemp = currentTemp + surfaceGap();
+            }
             else if (virtualTime < t2) {
                 if(deviceState.currentPhase !== 2) triggerPhase(2);
                 let p = (virtualTime - t1) / (t2 - t1);
                 let tBase = Math.max(startTemp, 8.0);
-                currentTemp = startTemp + (tBase - startTemp) * p; 
-            } 
+                currentTemp = startTemp + (tBase - startTemp) * p;
+                surfaceTemp = currentTemp + surfaceGap();
+            }
             else if (virtualTime < t3) {
                 if(deviceState.currentPhase !== 3) triggerPhase(3);
-                let p = (virtualTime - t2) / (t3 - t2);
-                let baseTemp = Math.max(startTemp, 8.0);
-                currentTemp = baseTemp + (thermalMetrics.targetTempPull - baseTemp) * p;
-                if(p >= 0.85 && !goldenTimeTriggered) triggerGoldenTime();
+
+                const local = virtualTime - t2;
+                const seg = phase3Segments.find(g => local >= g.startOffset && local < g.startOffset + g.dur)
+                          || phase3Segments[phase3Segments.length - 1];
+
+                const segKey = `${seg.kind}-${seg.index || 0}`;
+                if (segKey !== currentSegKey) {
+                    seg.surfStart = surfaceTemp;
+                    currentSegKey = segKey;
+                    applySegmentActuators(seg);
+                    logSegment(seg);
+                    updateSearCounterUI(seg);
+                }
+
+                const p = seg.dur > 0 ? (local - seg.startOffset) / seg.dur : 1;
+                currentTemp = seg.startT + (seg.endT - seg.startT) * p;
+                surfaceTemp = computeSurface(seg, p, currentTemp);
+
+                const phase3p = local / (t3 - t2);
+                if(phase3p >= 0.85 && !goldenTimeTriggered) triggerGoldenTime();
             }
             else if (virtualTime <= t4) {
                 if(deviceState.currentPhase !== 4) triggerPhase(4);
                 let p = (virtualTime - t3) / (t4 - t3);
                 currentTemp = thermalMetrics.targetTempPull + (thermalMetrics.targetTempFinal - thermalMetrics.targetTempPull) * p;
+                surfaceTemp = currentTemp + surfaceGap();
             }
 
             thermalMetrics.currentMaterialTemp = currentTemp;
             const tempStr = currentTemp.toFixed(1);
-            
+
             const tempEl = document.getElementById('val-temp');
             tempEl.innerText = tempStr;
             document.getElementById('m-temp').innerText = tempStr;
+
+            thermalMetrics.currentSurfaceTemp = surfaceTemp;
+            const surfaceEl = document.getElementById('val-surface');
+            surfaceEl.innerText = surfaceTemp.toFixed(0);
+            surfaceEl.classList.toggle('text-orange-400', deviceState.currentPhase === 3 && currentSegKey && currentSegKey.startsWith('sear'));
+            document.getElementById('m-surface').innerText = `겉면 ${surfaceTemp.toFixed(0)}°C`;
 
             let ringColor = '#0381FE';
             if (currentTemp > 45) ringColor = '#F59E0B';
@@ -1231,7 +1711,7 @@
             if(deviceState.currentPhase === 3) tempEl.classList.add('text-amber-400');
             if(deviceState.currentPhase === 4) {
                 tempEl.classList.remove('text-amber-400');
-                if(thermalMetrics.targetTempPull !== thermalMetrics.targetTempFinal) tempEl.classList.add('text-red-400'); 
+                if(thermalMetrics.targetTempPull !== thermalMetrics.targetTempFinal) tempEl.classList.add('text-red-400');
             }
         }
 
@@ -1240,20 +1720,20 @@
 
             if(phaseNum === 1) {
                 setMCUState('mcu-idle', 'bg-blue-600 border-blue-400 text-white font-bold shadow-[0_0_10px_rgba(37,99,235,0.8)]');
-                setPWM(0, 0); 
-                setHood('측정/밀폐<br>(0%)', 'bg-slate-800 border-blue-500 text-blue-300');
+                setPWM(0, 0);
+                setTopGrillHeight(TOP_HEIGHT.contact, '측정 · 하강', 'bg-slate-800 border-blue-500 text-blue-300');
                 addLog(`[MCU] Phase 1: Interlock Check & Thickness Measurement OK.`);
             }
             if(phaseNum === 2) {
                 setMCUState('mcu-temper', 'bg-amber-600 border-amber-400 text-white font-bold shadow-[0_0_10px_rgba(217,119,6,0.8)]');
                 document.getElementById('mcu-idle').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
-                
+
                 let pwmT = 30, pwmB = 40;
-                if(state.category === 'grains') { pwmT = 20; pwmB = 100; } 
+                if(state.category === 'grains') { pwmT = 20; pwmB = 100; }
                 setPWM(pwmT, pwmB);
-                
-                setHood('완전 밀폐<br>(0%)', 'bg-slate-800 border-amber-500 text-amber-300');
-                
+
+                setTopGrillHeight(TOP_HEIGHT.contact, '밀폐', 'bg-slate-800 border-amber-500 text-amber-300');
+
                 const sT = parseFloat(document.getElementById('test-init-temp').value);
                 if(sT < 8.0) addLog(`[MCU] Phase 2: 초기온도(${sT}℃) 보정을 위한 Active IR 템페링 가동.`);
                 else addLog(`[MCU] Phase 2: 최적 온도 도달. 상태 안정화 수행.`);
@@ -1261,36 +1741,26 @@
             if(phaseNum === 3) {
                 setMCUState('mcu-cook', 'bg-red-600 border-red-400 text-white font-bold shadow-[0_0_10px_rgba(220,38,38,0.8)]');
                 document.getElementById('mcu-temper').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
-                
-                let pwmT = 80, pwmB = 80;
-                if(state.category === 'beef') { pwmT = 100; pwmB = 100; }
-                else if(state.category === 'seafood') { pwmT = 60; pwmB = 50; }
-                else if(state.category === 'grains') { pwmT = 30; pwmB = 100; }
-                
-                setPWM(pwmT, pwmB);
-                setHood('완전 밀폐<br>(0%)', 'bg-slate-800 border-red-500 text-red-300');
-                addLog(`[MCU] Phase 3: Main Heating Started (Top ${pwmT}%, Btm ${pwmB}%).`);
+                // 실제 PWM/그릴 높이는 engineTick이 phase3Segments(rise/sear/gap)에 따라 갱신합니다.
+                addLog(`[MCU] Phase 3: Main Heating Started.`);
             }
             if(phaseNum === 4) {
                 deviceState.cookStatus = 'resting';
                 setMCUState('mcu-finish', 'bg-purple-600 border-purple-400 text-white font-bold shadow-[0_0_10px_rgba(147,51,234,0.8)]');
                 document.getElementById('mcu-cook').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
-                
+
                 setPWM(0, 0);
                 document.getElementById('temp-alert').classList.remove('hidden');
-                
+
                 let hClass = state.hoodFinishAction.includes('미세개방') ? 'bg-slate-700 border-sky-400 text-sky-300' :
                              state.hoodFinishAction.includes('정온') ? 'bg-slate-700 border-amber-400 text-amber-300' : 'bg-slate-700 border-purple-400 text-purple-300';
-                
-                let hoodPcnt = '0%';
-                if(state.hoodFinishAction.includes('미세개방')) hoodPcnt = '15%';
-                else if(state.hoodFinishAction.includes('완전개방')) hoodPcnt = '100%';
-                
-                setHood(`${state.hoodFinishAction.replace(' ', '<br>')}<br>(${hoodPcnt})`, hClass);
-                
+
+                const restMm = state.hoodFinishAction.includes('미세개방') ? TOP_HEIGHT.near : TOP_HEIGHT.contact;
+                setTopGrillHeight(restMm, state.hoodFinishAction, hClass);
+
                 document.getElementById('m-status-text').innerText = '레스팅 중 (잔열)';
                 document.getElementById('m-status-text').className = 'text-[12px] font-bold text-purple-500 mt-1';
-                
+
                 addLog(`[Physics] 가열 중단 온도 도달! (${state.hoodFinishAction} 동작)`, 'text-red-400 font-bold');
             }
             if(phaseNum === 5) {
@@ -1298,8 +1768,8 @@
                 addLog(`[System] 조리 완료 및 클라우드 동기화 성공.`, 'text-sky-300');
                 document.getElementById('mcu-finish').className = 'bg-slate-800 p-1.5 rounded border border-slate-600 text-slate-400 flex justify-between items-center';
                 document.getElementById('temp-alert').classList.add('hidden');
-                
-                setHood(`완전 개방<br>(100%)`, 'bg-slate-800 border-emerald-500 text-emerald-300');
+
+                setTopGrillHeight(TOP_HEIGHT.far, '완전 개방', 'bg-slate-800 border-emerald-500 text-emerald-300');
 
                 document.getElementById('overlay-title').innerText = '✨ 조리 완료!';
                 document.getElementById('m-feedback-card').classList.remove('hidden');
@@ -1310,12 +1780,76 @@
                 document.getElementById('m-btn-stop').innerText = '조리 완료';
                 document.getElementById('m-btn-stop').className = 'w-full bg-[#0381FE] text-white font-bold text-[15px] py-3.5 rounded-[18px] shadow-lg transition-colors';
                 document.getElementById('btn-emergency-test').disabled = true;
+
+                // [V8.3.0] 사용자가 시어링 값을 직접 조절했을 때만, 추천값 대비 델타로 취향을 저장합니다.
+                if (state.searUserTouched && isSearingAvailable()) {
+                    const slider = parseInt(document.getElementById('test-thickness').value);
+                    const thickness = slider === 0 ? 25 : slider;
+                    const rec = recommendSearPlan(state.category, state.doneness, thickness);
+                    const delta = {
+                        countDelta: state.searCount - rec.count,
+                        searSecDelta: state.searSec - rec.searSec
+                    };
+                    try { localStorage.setItem(getSearKey(state.category, state.cut, state.doneness), JSON.stringify(delta)); }
+                    catch (e) { /* 무시 */ }
+                    addLog(`[Personalize AI] 시어링 취향 저장: 횟수 ${fmtDelta(delta.countDelta)}회, 시간 ${fmtDelta(delta.searSecDelta)}초`, 'text-sky-300 font-bold');
+                    updateSearPersonalizeBadge();
+                }
             }
         }
 
         function setMCUState(id, classString) { document.getElementById(id).className = `p-1.5 rounded border transition-all duration-300 flex justify-between items-center ${classString}`; }
         function setPWM(top, bottom) { document.getElementById('pwm-top-txt').innerText = top + '%'; document.getElementById('pwm-bottom-txt').innerText = bottom + '%'; document.getElementById('pwm-top').style.height = top + '%'; document.getElementById('pwm-bottom').style.height = bottom + '%'; }
-        function setHood(text, colorClass) { document.getElementById('hw-hood').className = `w-[35%] rounded flex flex-col justify-center items-center h-full border-2 transition-colors ${colorClass}`; document.getElementById('hood-status').innerHTML = text; }
+        // [V8.3.0] 기존 "후드"를 상단 구리 그릴 승강(mm)으로 대체. DOM id(hw-hood/hood-status/hood-icon)는 그대로 두고 라벨만 바꿉니다.
+        function setTopGrillHeight(mm, label, colorClass) {
+            document.getElementById('hw-hood').className =
+                `w-[35%] rounded flex flex-col justify-center items-center h-full border-2 transition-colors ${colorClass}`;
+            document.getElementById('hood-status').innerHTML = `${label}<br>(${mm}mm)`;
+            document.getElementById('hood-icon').innerText = (mm === TOP_HEIGHT.contact) ? '🔥' : '🏗️';
+        }
+
+        function getCategoryDefaultPWM(cat) {
+            let pwmT = 80, pwmB = 80;
+            if(cat === 'beef') { pwmT = 100; pwmB = 100; }
+            else if(cat === 'seafood') { pwmT = 60; pwmB = 50; }
+            else if(cat === 'grains') { pwmT = 30; pwmB = 100; }
+            return { pwmT, pwmB };
+        }
+
+        // Phase 3 구간(rise/sear/gap)이 바뀔 때마다 PWM과 상단 그릴 높이를 갱신합니다.
+        function applySegmentActuators(seg) {
+            const def = getCategoryDefaultPWM(state.category);
+            if(seg.kind === 'sear') {
+                setPWM(100, def.pwmB);
+                setTopGrillHeight(TOP_HEIGHT.contact, '시어링 · 접촉', 'bg-red-950 border-red-500 text-red-300');
+            } else if(seg.kind === 'gap') {
+                setPWM(30, def.pwmB);
+                setTopGrillHeight(TOP_HEIGHT.near, '간격 · 근접', 'bg-amber-950 border-amber-500 text-amber-300');
+            } else {
+                setPWM(def.pwmT, def.pwmB);
+                setTopGrillHeight(TOP_HEIGHT.mid, '이격', 'bg-slate-800 border-red-500 text-red-300');
+            }
+        }
+
+        function logSegment(seg) {
+            if(seg.kind === 'sear') {
+                addLog(`[MCU] Searing ${seg.index}/${seg.total} — 상단 그릴 하강 ${TOP_HEIGHT.contact}mm 접촉 (${seg.dur}초)`, 'text-orange-400 font-bold');
+            } else if(seg.kind === 'gap') {
+                addLog(`[MCU] Searing ${seg.index}/${seg.total} 종료 — 상단 ${TOP_HEIGHT.near}mm 이격 (간격 ${seg.dur}초)`, 'text-slate-400');
+            } else {
+                addLog(`[MCU] Phase 3 승온 구간 — 상단 ${TOP_HEIGHT.mid}mm 이격 (${seg.dur}초)`, 'text-slate-400');
+            }
+        }
+
+        function updateSearCounterUI(seg) {
+            const el = document.getElementById('sear-counter');
+            if(!el) return;
+            if(seg && seg.total && (seg.kind === 'sear' || seg.kind === 'gap')) {
+                el.innerText = `시어링 ${seg.index}/${seg.total}`;
+            } else if(!state.searCount) {
+                el.innerText = '';
+            }
+        }
         function addLog(msg, color = 'text-slate-400') {
             const c = document.getElementById('log-container');
             const time = new Date().toLocaleTimeString('en-US', {hour12:false});
@@ -1367,7 +1901,7 @@
             deviceState.cookStatus = 'emergency';
 
             setPWM(0, 0);
-            setHood('안전모드<br>완전개방 (100%)', 'bg-red-950 border-red-500 text-red-300');
+            setTopGrillHeight(TOP_HEIGHT.far, '안전모드 · 완전개방', 'bg-red-950 border-red-500 text-red-300');
 
             // 왼쪽 기기 패널: 짧은 상태 문구만 표시
             document.getElementById('overlay-title').innerText = '⚠️ 안전모드 작동';
@@ -1397,6 +1931,10 @@
                 ? 'text-[12px] font-bold text-purple-500 mt-1'
                 : 'text-[12px] font-bold text-[#0381FE] mt-1';
 
+            // 안전모드 중 PWM/그릴 높이를 0/완전개방으로 바꿔뒀으므로, Phase 3 재개 시
+            // 현재 구간의 액추에이터 상태를 다시 적용하도록 세그먼트 변경으로 취급합니다.
+            currentSegKey = null;
+
             addLog(`[System] 안전 확인 완료. 조리를 재개합니다.`, 'text-emerald-400 font-bold');
             simTick = setInterval(engineTick, 100);
         }
@@ -1406,33 +1944,38 @@
         // 항상 켜져 있는 simTick/goldenTimeInterval의 결과를 그때그때 다시 그리기만 합니다.
         // ------------------------------------------------------------------
         function switchMobileTab(tab) {
-            const deviceView = document.getElementById('m-devicecontrol-view');
-            const serviceView = document.getElementById('m-service-view');
-            const actionBar = document.getElementById('m-action-bar');
-            const tabDevice = document.getElementById('m-tab-device');
-            const tabService = document.getElementById('m-tab-service');
-            const activeClass = 'flex-1 flex flex-col items-center justify-center text-[#0381FE] cursor-pointer';
+            const views = {
+                device:    document.getElementById('m-devicecontrol-view'),
+                community: document.getElementById('m-community-view'),
+                care:      document.getElementById('m-care-view')
+            };
+            const tabs = {
+                device:    document.getElementById('m-tab-device'),
+                community: document.getElementById('m-tab-community'),
+                care:      document.getElementById('m-tab-care')
+            };
+            const activeClass   = 'flex-1 flex flex-col items-center justify-center text-[#0381FE] cursor-pointer';
             const inactiveClass = 'flex-1 flex flex-col items-center justify-center text-gray-400 cursor-pointer';
 
-            if(tab === 'service') {
-                deviceView.classList.add('hidden'); deviceView.classList.remove('flex');
-                serviceView.classList.remove('hidden'); serviceView.classList.add('flex');
-                actionBar.classList.add('hidden');
-                tabDevice.className = inactiveClass;
-                tabService.className = activeClass;
-                updateServiceCards();
-            } else {
-                serviceView.classList.add('hidden'); serviceView.classList.remove('flex');
-                deviceView.classList.remove('hidden'); deviceView.classList.add('flex');
-                actionBar.classList.remove('hidden');
-                tabService.className = inactiveClass;
-                tabDevice.className = activeClass;
-            }
+            Object.keys(views).forEach(k => {
+                const on = (k === tab);
+                views[k].classList.toggle('hidden', !on);
+                views[k].classList.toggle('flex', on);
+                tabs[k].className = on ? activeClass : inactiveClass;
+            });
+
+            // 조리 시작/중단 버튼은 기기제어 탭에서만 노출
+            document.getElementById('m-action-bar').classList.toggle('hidden', tab !== 'device');
+
+            if (tab === 'care')      updateCareCards();
+            if (tab === 'community') updateCommunityCards();
         }
 
-        // 서비스 탭을 열 때마다 현재 state/deviceState를 기준으로 다시 그립니다.
+        // 쿠킹 케어 탭을 열 때마다 현재 state/deviceState를 기준으로 다시 그립니다.
         // 별도 인터벌 없이 "탭 진입 시점"에만 계산하므로 백그라운드에서 도는 루프가 생기지 않습니다.
-        function updateServiceCards() {
+        // ⚠️ 카드 컨테이너 자체를 재생성하면 D의 드래그앤드롭 순서가 초기화되므로, 내용만 갱신합니다.
+        function updateCareCards() {
+            updateCareReorderHint();
             // 카드 1: SmartThings — 실내 공기 환경 (조리 전/후 미세먼지 수치)
             const airBadge = document.getElementById('svc-air-status-badge');
             const airDesc = document.getElementById('svc-air-desc');
@@ -1535,6 +2078,207 @@
         // Food/Health 카드의 딥링크 버튼 — 데모 환경이라 실제 이동 대신 로그로만 기록
         function openExternalService(name) {
             addLog(`[Service] ${name} 앱으로 이동합니다. (데모 환경에서는 실제 화면 전환 없이 기록만 남깁니다)`, 'text-sky-300');
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.3.0-D] 쿠킹 케어 카드 순서 변경 — 롱프레스(600ms) + 포인터 드래그.
+        // pointer 이벤트를 쓰면 마우스와 터치를 한 번에 처리할 수 있습니다.
+        // ------------------------------------------------------------------
+        const CARE_ORDER_KEY = 'minmax_care_order';
+        const CARE_DEFAULT_ORDER = ['air', 'seasoning', 'health', 'pantry'];
+
+        function loadCareOrder() {
+            try {
+                const raw = localStorage.getItem(CARE_ORDER_KEY);
+                const arr = raw ? JSON.parse(raw) : null;
+                if (!Array.isArray(arr)) return CARE_DEFAULT_ORDER;
+                // 저장된 순서에 없는 카드가 생기면 뒤에 붙임 (카드 추가 대비)
+                const merged = arr.filter(id => CARE_DEFAULT_ORDER.includes(id));
+                CARE_DEFAULT_ORDER.forEach(id => { if (!merged.includes(id)) merged.push(id); });
+                return merged;
+            } catch (e) { return CARE_DEFAULT_ORDER; }
+        }
+
+        function saveCareOrder() {
+            const ids = [...document.querySelectorAll('#care-card-list .care-card')]
+                          .map(el => el.dataset.cardId);
+            try { localStorage.setItem(CARE_ORDER_KEY, JSON.stringify(ids)); } catch (e) {}
+            addLog(`[UI] 쿠킹 케어 카드 순서 변경: ${ids.join(' → ')}`, 'text-sky-300');
+        }
+
+        function applyCareOrder() {
+            const list = document.getElementById('care-card-list');
+            if(!list) return;
+            loadCareOrder().forEach(id => {
+                const el = list.querySelector(`[data-card-id="${id}"]`);
+                if (el) list.appendChild(el);        // 순서대로 재배치
+            });
+        }
+
+        function isCareLocked() {
+            return deviceState.cookStatus !== 'idle' && deviceState.cookStatus !== 'completed';
+        }
+
+        function initCareReorder() {
+            const list = document.getElementById('care-card-list');
+            if(!list) return;
+            let pressTimer = null, dragging = null, startY = 0, moved = false;
+
+            list.addEventListener('pointerdown', (e) => {
+                const card = e.target.closest('.care-card');
+                if (!card || isCareLocked()) return;
+                // 카드 안의 버튼을 누른 경우는 제외
+                if (e.target.closest('button')) return;
+
+                startY = e.clientY; moved = false;
+                pressTimer = setTimeout(() => {
+                    dragging = card;
+                    card.classList.add('dragging');
+                    list.classList.add('reordering');
+                    card.setPointerCapture(e.pointerId);
+                }, 600);
+            });
+
+            list.addEventListener('pointermove', (e) => {
+                if (!dragging) {
+                    if (Math.abs(e.clientY - startY) > 10) { clearTimeout(pressTimer); moved = true; }
+                    return;
+                }
+                e.preventDefault();
+
+                // 포인터 Y와 형제 카드 중앙선을 비교해 삽입 위치 결정
+                const siblings = [...list.querySelectorAll('.care-card:not(.dragging)')];
+                const after = siblings.find(el => {
+                    const r = el.getBoundingClientRect();
+                    return e.clientY < r.top + r.height / 2;
+                });
+                if (after) list.insertBefore(dragging, after);
+                else       list.appendChild(dragging);
+            });
+
+            const endDrag = () => {
+                clearTimeout(pressTimer);
+                if (!dragging) return;
+                dragging.classList.remove('dragging');
+                list.classList.remove('reordering');
+                dragging = null;
+                saveCareOrder();
+            };
+            list.addEventListener('pointerup', endDrag);
+            list.addEventListener('pointercancel', endDrag);
+        }
+
+        function updateCareReorderHint() {
+            const hint = document.getElementById('care-reorder-hint');
+            if(!hint) return;
+            hint.innerText = isCareLocked() ? '조리 중에는 순서를 바꿀 수 없어요.' : '길게 눌러 순서를 바꿀 수 있어요.';
+        }
+
+        // ------------------------------------------------------------------
+        // [V8.3.0-D] 커뮤니티 탭 (컨셉 목업) — 전부 하드코딩 데이터이며 실제 서버 연동은 없습니다.
+        // 프리셋 = 재료 + 부위 + 굽기 + 액세서리 + 시어링 + 온도 오프셋
+        // ------------------------------------------------------------------
+        const communityPresets = [
+            { id: 'p1', author: '셰프 김민준', title: '꽃등심 3cm 겉바속촉',
+              cat: 'beef', cut: '꽃등심', done: '미디엄 레어',
+              vessel: 'none', grill: 'stainless+copper', top: 'copper',
+              searMode: 'post', searCount: 3, searSec: 40, uses: 1284 },
+            { id: 'p2', author: '쿠킹랩 한지우', title: '두툼한 삼겹살 정석',
+              cat: 'pork', cut: '삼겹살', done: '미디엄 웰',
+              vessel: 'none', grill: 'stainless', top: 'copper',
+              searMode: 'pre', searCount: 2, searSec: 60, uses: 842 },
+            { id: 'p3', author: '집밥연구소', title: '닭다리 바삭 로스트',
+              cat: 'chicken', cut: '닭다리', done: '바로 조리',
+              vessel: 'glass', grill: 'stainless', top: 'copper',
+              searMode: 'post', searCount: 2, searSec: 45, uses: 517 }
+        ];
+
+        function presetSummary(p) {
+            return `${grillLabels[p.grill] || p.grill} / 상단 ${topLabels[p.top] || p.top} · ${p.searMode === 'post' ? '후시어' : '선시어'} ${p.searCount}회 × ${p.searSec}초`;
+        }
+
+        function applyPreset(id) {
+            const p = communityPresets.find(x => x.id === id);
+            if (!p) return;
+            if (deviceState.cookStatus !== 'idle' && deviceState.cookStatus !== 'completed') return;
+
+            // 기존 프록시 클릭 패턴을 그대로 이용해 LCD 상태를 먼저 맞춥니다
+            document.getElementById(`cat-btn-${p.cat}`).click();
+            mobileSelectCutChanged(p.cut);
+            mobileSelectDoneChanged(p.done);
+
+            state.bottomVessel = p.vessel;
+            state.bottomGrill  = p.grill;
+            state.topAccessory = p.top;
+            state.searMode     = p.searMode;
+            syncAccessoryUI();
+
+            setSearParams(p.searCount, p.searSec, 'preset');
+
+            switchMobileTab('device');
+            addLog(`[Community] 프리셋 불러오기: ${p.author} — ${p.title}`, 'text-sky-300 font-bold');
+        }
+
+        function renderCommunityPresetList() {
+            const el = document.getElementById('community-preset-list');
+            if(!el) return;
+            el.innerHTML = communityPresets.map(p => `
+                <div class="bg-[#F4F4F4] rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="text-[12px] font-bold text-gray-900">${p.title}</div>
+                        <div class="text-[9px] font-bold text-gray-400">${p.uses.toLocaleString()}회 사용</div>
+                    </div>
+                    <div class="text-[10px] text-gray-500 mb-1.5">${p.author}</div>
+                    <div class="text-[10px] text-gray-500 mb-2.5">${presetSummary(p)}</div>
+                    <button onclick="applyPreset('${p.id}')" class="w-full bg-[#0381FE] active:bg-[#0265C8] text-white text-[11px] font-bold py-2 rounded-xl transition-colors">불러오기</button>
+                </div>
+            `).join('');
+        }
+
+        function renderMyPresetCard() {
+            const btn = document.getElementById('btn-publish-preset');
+            const desc = document.getElementById('my-preset-desc');
+            if(!btn || !desc) return;
+            const ready = deviceState.cookStatus === 'completed' && state.category && state.cut && state.doneness;
+            btn.disabled = !ready;
+            desc.innerText = ready
+                ? `방금 완료한 "${state.cut} · ${state.doneness}" 조리를 프리셋으로 게시할 수 있어요.`
+                : '마지막으로 완료한 조리를 프리셋으로 게시할 수 있어요.';
+        }
+
+        function publishMyPreset() {
+            if (deviceState.cookStatus !== 'completed') return;
+            document.getElementById('my-preset-published-msg').classList.remove('hidden');
+            document.getElementById('btn-publish-preset').disabled = true;
+            addLog(`[Community] 내 프리셋 게시: ${state.cut} · ${state.doneness} (데모 환경에서는 실제 게시 없이 기록만 남깁니다)`, 'text-sky-300');
+        }
+
+        function renderCommunityDistribution() {
+            const el = document.getElementById('community-distribution');
+            if(!el) return;
+            if(!state.category) {
+                el.innerHTML = `<div class="text-[11px] text-gray-400">재료를 선택하면 다른 사용자들의 설정 분포를 보여드려요.</div>`;
+                return;
+            }
+            // 목업 분포 데이터 — 카테고리별로 고정된 임의 비율
+            const dist = [
+                { label: '선시어', pct: 62 },
+                { label: '후시어', pct: 38 }
+            ];
+            el.innerHTML = dist.map(d => `
+                <div>
+                    <div class="flex justify-between text-[10px] text-gray-500 mb-1"><span>${d.label}</span><span>${d.pct}%</span></div>
+                    <div class="w-full h-2 bg-[#F4F4F4] rounded-full overflow-hidden">
+                        <div class="h-full bg-[#0381FE] rounded-full" style="width:${d.pct}%;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateCommunityCards() {
+            renderCommunityPresetList();
+            renderMyPresetCard();
+            renderCommunityDistribution();
         }
 
         // 나머지 화면(기기 패널·코어 시스템)은 기존처럼 동적(반응형) 레이아웃을 그대로 씁니다.
