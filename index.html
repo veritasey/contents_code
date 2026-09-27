@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphene Smart Cooker V8.4.0 (SmartThings One UI Sync)</title>
+    <title>Graphene Smart Cooker V8.4.1 (SmartThings One UI Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -55,7 +55,7 @@
 
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center z-10">
         <div>
-            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.4.0</h1>
+            <h1 class="text-xl font-bold text-sky-400">Graphene Smart Cooker V8.4.1</h1>
             <p class="text-xs text-slate-400">Auto-First Mobile UX</p>
         </div>
         <div class="flex gap-4 text-xs font-mono">
@@ -195,6 +195,9 @@
                                 ⏹ 조리 중지
                             </button>
                         </div>
+                        <p id="acc-confirm-hint" class="hidden mt-1.5 text-[10px] text-amber-400 font-bold text-center">
+                            ⚠️ 모바일에서 액세서리 장착을 확인해 주세요.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -305,7 +308,7 @@
                     <button onclick="clearLog()" class="text-[9px] bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors">Clear</button>
                 </div>
                 <div class="p-2 flex-1 overflow-y-auto scrollbar-hide font-mono text-[9px] leading-relaxed flex flex-col gap-1" id="log-container">
-                    <div class="text-slate-500">[System] V8.4.0 Simulator Loaded. Ready.</div>
+                    <div class="text-slate-500">[System] V8.4.1 Simulator Loaded. Ready.</div>
                 </div>
             </div>
         </section>
@@ -948,9 +951,14 @@
 
         // ------------------------------------------------------------------
         // [V8.3.0] Phase 3 구간 분할 — 선/후시어는 배열 순서만 뒤집어 표현합니다.
+        // [V8.4.1-P2] 60% 안전장치가 횟수/시간을 줄여도 호출부가 알 방법이 없어 슬라이더와
+        // 실제 실행이 어긋났습니다. 배열 대신 {segments, count, searSec, adjusted}를 돌려주고,
+        // 조정이 실제로 일어났는지(adjusted)를 호출부가 판단해 UI·로그에 반영하게 합니다.
         // ------------------------------------------------------------------
         function buildPhase3Segments(cookSec, count, searSec, gapSec, mode) {
-            if (!count || count === 0) return [{ kind: 'rise', dur: cookSec }];
+            if (!count || count === 0) {
+                return { segments: [{ kind: 'rise', dur: cookSec }], count: 0, searSec: 0, adjusted: false };
+            }
 
             let c = count, s = searSec;
             const searTotalOf = (n, sec) => (sec + gapSec) * n - gapSec;   // 마지막 간격 제외
@@ -970,9 +978,11 @@
                 if (i < c - 1) cycle.push({ kind: 'gap', dur: gapSec });
             }
 
-            return mode === 'pre'
+            const segments = mode === 'pre'
                 ? [...cycle, { kind: 'rise', dur: riseSec }]
                 : [{ kind: 'rise', dur: riseSec }, ...cycle];
+
+            return { segments, count: c, searSec: s, adjusted: (c !== count || s !== searSec) };
         }
 
         // 전체 승온분(base -> pull)을 구간별 가중 시간 비율로 나눠 갖습니다.
@@ -1154,10 +1164,19 @@
             return `${state.bottomVessel}|${state.bottomGrill}|${state.topAccessory}`;
         }
 
-        function refreshAccessoryCheck() {
+        // [V8.4.1-P4] syncAccessoryUI는 시어링 방식(pre/post)처럼 물리 액세서리와 무관한
+        // 변경에도 항상 불리는데, 예전엔 그때마다 이 함수가 체크를 무조건 재계산해 사용자가
+        // 방금 확인한 체크가 풀렸습니다. 실제 물리 구성(시그니처)이 바뀐 경우에만 재평가합니다.
+        let lastCheckedSignature = null;
+
+        function refreshAccessoryCheck(force) {
+            const sig = accessorySignature();
+            if (!force && sig === lastCheckedSignature) { updateStartEnabled(); return; }
+            lastCheckedSignature = sig;
+
             let last = null;
             try { last = localStorage.getItem(ACC_LAST_KEY); } catch (e) {}
-            const same = (last === accessorySignature());
+            const same = (last === sig);
             state.accessoryConfirmed = same;          // 같은 구성이면 자동 확인
             const check = document.getElementById('m-acc-check');
             if (check) check.checked = same;
@@ -1757,7 +1776,10 @@
 
             document.getElementById('step-accessory').classList.remove('hidden');
             setTimeout(() => document.getElementById('step-accessory').classList.remove('opacity-0'), 50);
-            applyAccessoryDefaults(state.category);
+            // [V8.4.1-P3] 액세서리 리셋은 카테고리를 바꿀 때만 일어나야 합니다 (selectCategory 참고).
+            // 여기서 applyAccessoryDefaults를 부르면 세부 조정으로 맞춰둔 구성이 굽기만 바꿔도
+            // 지워져, 같은 조작인데 LCD와 모바일의 결과가 달라졌습니다. UI 갱신만 합니다.
+            syncAccessoryUI();
 
             syncMobileUI();
             updateETA();
@@ -1798,7 +1820,20 @@
             // [V8.3.0] 시어링 계획 확정 및 Phase 3 구간 분할 (타임라인 확정 직후 1회)
             resolveSearParams();
             const gapSec = (searBaseline[state.category] && searBaseline[state.category].gapSec) || 45;
-            phase3Segments = buildPhase3Segments(calculatedPhaseTimes.cook, state.searCount, state.searSec, gapSec, state.searMode);
+            const requestedSearCount = state.searCount, requestedSearSec = state.searSec;
+            const searPlan = buildPhase3Segments(calculatedPhaseTimes.cook, state.searCount, state.searSec, gapSec, state.searMode);
+            phase3Segments = searPlan.segments;
+
+            // [V8.4.1-P2] 60% 안전장치가 요청값을 줄였다면 침묵하지 않고 슬라이더·로그에 그대로 알립니다.
+            if (searPlan.adjusted) {
+                state.searCount = searPlan.count;
+                state.searSec = searPlan.searSec;
+                updateSearControlsUI();
+                updateAccessorySummary();
+                refreshSummary();
+                addLog(`[System] 조리 시간이 짧아 시어링을 ${requestedSearCount}회 × ${requestedSearSec}초 → ${searPlan.count}회 × ${searPlan.searSec}초로 자동 조정했습니다.`, 'text-amber-400 font-bold');
+            }
+
             assignSegmentTemps(phase3Segments, Math.max(startTemp, 8.0), profile.pull);
             currentSegKey = null;
             surfaceTemp = startTemp + surfaceGap();
@@ -1917,6 +1952,9 @@
             document.getElementById('m-target-temp').innerText = '';
             document.getElementById('m-eta-clock').innerText = '';
             refreshMobileScreenMode();
+            // [V8.4.1-P4] 조리 완료 직후 저장된 액세서리 시그니처를 반영해야 하므로,
+            // 시그니처가 안 바뀌었어도 강제로 재평가합니다.
+            refreshAccessoryCheck(true);
 
             updateETA();
             refreshDeviceUI();
@@ -2178,6 +2216,9 @@
         function refreshMobileScreenMode() {
             const idle = deviceState.cookStatus === 'idle';
             const showInCook = deviceState.cookStatus === 'cooking' || deviceState.cookStatus === 'resting' || deviceState.cookStatus === 'emergency';
+            // [V8.4.1-P6] updatePhaseTrackUI(5)가 완료 시 4개 점을 모두 채우는데, showInCook만
+            // 기준으로 삼으면 completed는 idle도 showInCook도 아니라서 그 화면 자체가 숨겨졌습니다.
+            const showTrack = showInCook || deviceState.cookStatus === 'completed';
 
             const materialCard = document.getElementById('m-card-material');
             const summaryCard = document.getElementById('m-summary-card');
@@ -2190,7 +2231,7 @@
             const actionStatus = document.getElementById('m-action-status');
             const detailRow = document.getElementById('m-detail-entry-row');
             const etaClock = document.getElementById('m-eta-clock');
-            if (phaseTrack) { phaseTrack.classList.toggle('hidden', !showInCook); phaseTrack.classList.toggle('flex', showInCook); }
+            if (phaseTrack) { phaseTrack.classList.toggle('hidden', !showTrack); phaseTrack.classList.toggle('flex', showTrack); }
             if (actionStatus) actionStatus.classList.toggle('hidden', !showInCook);
             if (detailRow) { detailRow.classList.toggle('hidden', !showInCook); detailRow.classList.toggle('flex', showInCook); }
             if (etaClock) etaClock.classList.toggle('hidden', !showInCook);
@@ -2469,6 +2510,21 @@
             // 안전모드 중 PWM/그릴 높이를 0/완전개방으로 바꿔뒀으므로, Phase 3 재개 시
             // 현재 구간의 액추에이터 상태를 다시 적용하도록 세그먼트 변경으로 취급합니다.
             currentSegKey = null;
+
+            // [V8.4.1-P5] Phase 3는 위의 세그먼트 재적용으로 복구되지만, 레스팅(Phase 4)은
+            // 세그먼트를 쓰지 않고 triggerPhase(4)도 다시 불리지 않아 복구 경로가 없었습니다.
+            // 안전모드 진입 전이 레스팅이었다면 여기서 직접 그 상태로 되돌립니다.
+            if (deviceState.cookStatus === 'resting') {
+                setPWM(0, 0);
+                const fine = state.hoodFinishAction && state.hoodFinishAction.includes('미세개방');
+                setTopGrillHeight(
+                    fine ? TOP_HEIGHT.near : TOP_HEIGHT.contact,
+                    (state.hoodFinishAction || '밀폐'),
+                    fine ? 'bg-slate-700 border-sky-400 text-sky-300'
+                         : 'bg-slate-700 border-amber-400 text-amber-300'
+                );
+            }
+
             refreshDeviceUI();
             refreshMobileScreenMode();
             updateActionStatus();
@@ -2553,14 +2609,27 @@
             if (mBtnStart) mBtnStart.disabled = !ready;
         }
 
+        // [V8.4.1-P1] LCD에서 조리 시작을 눌렀거나 모바일이 다른 탭(커뮤니티/쿠킹 케어)이면
+        // 체크 행 자체가 화면에 없어 흔들어도 아무 반응이 없어 보였습니다.
+        // 기기제어 탭으로 강제 전환하고, 기기 패널에도 안내 줄을 띄워 어느 화면에서 눌러도 이유가 보이게 합니다.
         function shakeAccessoryCheck() {
+            switchMobileTab('device');
+
             const row = document.getElementById('m-acc-check-row');
             if (row) {
-                row.classList.add('animate-pulse');
-                setTimeout(() => row.classList.remove('animate-pulse'), 600);
+                row.classList.add('animate-pulse', 'ring-2', 'ring-amber-400');
+                setTimeout(() => row.classList.remove('animate-pulse', 'ring-2', 'ring-amber-400'), 900);
             }
             const check = document.getElementById('m-acc-check');
             if (check) check.focus();
+
+            const hint = document.getElementById('acc-confirm-hint');
+            if (hint) {
+                hint.classList.remove('hidden');
+                clearTimeout(hint._t);
+                hint._t = setTimeout(() => hint.classList.add('hidden'), 3000);
+            }
+            addLog('[UI] 액세서리 장착 확인이 필요합니다. 모바일에서 확인해 주세요.', 'text-amber-400 font-bold');
         }
 
         // ------------------------------------------------------------------
