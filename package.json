@@ -1,0 +1,12 @@
+{
+  "name": "graphene-smart-cooker-simulator",
+  "version": "8.5.1",
+  "private": true,
+  "description": "minMax 조리기기(그래핀 스마트 쿠커) 동작 시뮬레이터",
+  "scripts": {
+    "test": "node test/verify_all.js && node test/verify_device_mode.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}
